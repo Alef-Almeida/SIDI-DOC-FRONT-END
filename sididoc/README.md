@@ -1,16 +1,23 @@
-# React + Vite
+# SIDI-DOC (Front-end)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema de gestão de documentos e digitalização. Este é o repositório do Front-end desenvolvido em React + Vite.
 
-Currently, two official plugins are available:
+## 🎨 Layout e Design
+O design oficial das telas e fluxos está no Figma. Consulte antes de iniciar o desenvolvimento de uma nova tela.
+- **[🔗 Link para o Figma do Projeto](COLE_O_SEU_LINK_DO_FIGMA_AQUI)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Tecnologias
+- [React](https://reactjs.org/)
+- [Vite](https://vitejs.dev/)
+- [React Router Dom](https://reactrouter.com/) (Navegação)
+- [Axios](https://axios-http.com/) (Requisições HTTP)
 
-## React Compiler
+## 💻 Pré-requisitos
+Antes de começar, certifique-se de ter instalado em sua máquina:
+- [Node.js](https://nodejs.org/) (Versão 18 ou superior recomendada)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 📦 Como rodar o projeto
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. **Clone o repositório:**
+   ```bash
+   git clone [https://github.com/SEU-USUARIO/sidi-doc-front.git](https://github.com/SEU-USUARIO/sidi-doc-front.git)
