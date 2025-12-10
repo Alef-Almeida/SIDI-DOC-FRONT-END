@@ -1,15 +1,18 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-// Aqui importaremos as páginas depois. Ex: import Login from './pages/Login';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota inicial de exemplo */}
-        <Route path="/" element={<h1>Home do SIDI-DOC</h1>} />
+        {/* A rota raiz "/" vai carregar o Login */}
+        <Route path="/" element={<Login />} />
         
-        {/* Exemplo de futura rota: */}
-        {/* <Route path="/login" element={<Login />} /> */}
+        {/* Se tentar acessar /login, também vai pro Login */}
+        <Route path="/login" element={<Login />} />
+
+        {/* Exemplo futuro para Cadastro */}
+        {/* <Route path="/cadastro" element={<Cadastro />} /> */}
       </Routes>
     </BrowserRouter>
   );

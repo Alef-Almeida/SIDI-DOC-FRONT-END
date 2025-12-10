@@ -1,5 +1,4 @@
 import AppRoutes from './routes';
-import './index.css'; // Seus estilos globais
 
 function App() {
   return (
@@ -7,4 +6,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
