@@ -1,10 +1,9 @@
+// src/App.jsx
 import AppRoutes from './routes';
-import './index.css'; // Seus estilos globais
+import './index.css';
 
 function App() {
-  return (
-    <AppRoutes />
-  );
+  return <AppRoutes />;
 }
 
-export default App
+export default App;

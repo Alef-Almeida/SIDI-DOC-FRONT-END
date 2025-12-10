@@ -1,0 +1,331 @@
+/* ================================
+   LAYOUT GERAL
+================================ */
+.upload-page {
+  min-height: 100vh;
+  background-color: #ffffff;
+  font-family: "DM Sans", sans-serif;
+  color: #0b1220;
+}
+
+/* ================================
+   HEADER / TOPBAR
+================================ */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 6px 80px;
+  height: 56px;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #ffffff;
+}
+
+.back-button {
+  border: none;
+  background: transparent;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.back-icon {
+  width: 18px;
+  height: 18px;
+  stroke: #6b7280;
+  stroke-width: 2;
+  fill: none;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background-color: #00bdd6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-icon-svg {
+  width: 22px;
+  height: 22px;
+  stroke: #ffffff;
+  fill: none;
+  stroke-width: 2;
+}
+
+.brand-text {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+/* ================================
+   CONTEÚDO PRINCIPAL
+================================ */
+.upload-main {
+  padding: 24px 80px 40px;
+}
+
+.upload-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.upload-header p {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* ================================
+   FILTROS: SETOR + TIPO
+================================ */
+.upload-filters {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  max-width: 960px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* SELECT ESTILIZADO */
+.field select {
+  width: 100%;
+  padding: 12px 40px 12px 14px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+
+  /* Remove estilo padrão */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  font-size: 14px;
+  color: #111827;
+  cursor: pointer;
+  outline: none;
+
+  /* Seta customizada */
+  background-image: url("data:image/svg+xml;utf8,<svg fill='none' stroke='%236b7280' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 18px;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.field select:hover {
+  border-color: #cbd5f5;
+  background-color: #f9fafb;
+}
+
+.field select:focus {
+  border-color: #00bdd6;
+  box-shadow: 0 0 0 2px rgba(0, 189, 214, 0.15);
+}
+
+/* ================================
+   DROPZONE
+================================ */
+
+.upload-dropzone-wrapper {
+  margin-top: 28px;
+}
+
+.dropzone {
+  border: 2px dashed #d1d5db;
+  border-radius: 18px;
+  padding: 52px 16px;
+  text-align: center;
+  background-color: #f9fbfd;
+  transition: 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.dropzone--dragging {
+  border-color: #00bdd6;
+  background-color: #e0faff;
+}
+
+/* quando NÃO há arquivo */
+.dropzone-icon svg {
+  width: 40px;
+  height: 40px;
+  stroke: #00bdd6;
+  stroke-width: 2.2;
+  fill: none;
+}
+
+.dropzone-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.dropzone-or {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 10px 0;
+}
+
+.dropzone-button {
+  padding: 10px 26px;
+  border-radius: 999px;
+  border: none;
+  background-color: #00bdd6;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.dropzone-button:hover {
+  background-color: #009eb8;
+}
+
+.dropzone-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* quando HÁ arquivo */
+.preview-area {
+  position: relative;
+}
+
+.preview-image {
+  width: 240px;
+  max-width: 100%;
+  border-radius: 18px;
+  opacity: 0.4;
+  filter: blur(2px);
+  border: 1px solid #e5e7eb;
+}
+
+.preview-pdf {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  opacity: 0.7;
+}
+
+/* botão X de limpar arquivo */
+.clear-file-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: none;
+  color: #111827;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: 0.2s;
+  font-weight: bold;
+}
+
+.clear-file-btn:hover {
+  background-color: #ffe5e5;
+  color: #b91c1c;
+}
+
+/* input escondido */
+.dropzone-input-hidden {
+  display: none;
+}
+
+/* ================================
+   BOTÃO FINAL
+================================ */
+.upload-actions {
+  margin-top: 28px;
+}
+
+.upload-button {
+  padding: 14px 34px;
+  border-radius: 999px;
+  border: none;
+  background-color: #00bdd6;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.upload-button:hover {
+  background-color: #009eb8;
+}
+
+/* ================================
+   ERROS / SUCESSO
+================================ */
+.upload-errors {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 10px;
+  background-color: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+}
+
+.upload-success {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 10px;
+  background-color: #dcfce7;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+/* ================================
+   RESPONSIVIDADE
+================================ */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 6px 16px;
+  }
+
+  .upload-main {
+    padding: 20px 16px 32px;
+  }
+
+  .upload-header h1 {
+    font-size: 26px;
+  }
+
+  .upload-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-image {
+    width: 180px;
+  }
+}
