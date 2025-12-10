@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
+import Login from '../src/pages/Login/Login';
+import Home from '../src/pages/Home/Home';
 
 function AppRoutes() {
   return (
@@ -10,6 +11,8 @@ function AppRoutes() {
         
         {/* Se tentar acessar /login, também vai pro Login */}
         <Route path="/login" element={<Login />} />
+
+        <Route path='/home' element={<Home />} />
 
         {/* Exemplo futuro para Cadastro */}
         {/* <Route path="/cadastro" element={<Cadastro />} /> */}

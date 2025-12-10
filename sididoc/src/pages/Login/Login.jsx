@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiFileText, FiAlertCircle } from 'react-icons/fi';
 
 // Importando a regra de negócio (Service)
-import { loginRequest } from '../services/authService';
+import { loginRequest } from "../../services/authService";
 
 // Importando os componentes reutilizáveis (UI)
-import { Input } from '../components/Input';
-import { Button } from '../components/Button';
+import { Input } from "../../components/Input";
+import { Button } from "../../components/Button";
 
 function Login() {
   // Estados do formulário
@@ -46,7 +46,7 @@ function Login() {
         }
 
         // 4. Redireciona para o sistema principal
-        navigate('/dashboard');
+        navigate('/home');
       } else {
         // Caso o backend retorne 200 OK mas sem token (improvável, mas possível)
         setError('Erro de protocolo: Token não recebido.');
