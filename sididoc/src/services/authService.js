@@ -1,7 +1,7 @@
 import api from './api';
 
-export const loginRequest = async (email, senha) => {
-  // Post para o endpoint do seu Java.
-  const response = await api.post('/login', { email, senha });
+export const loginRequest = async (email, password) => {
+  // O JavaScript entende que { email, password } é { email: email, password: password }
+  const response = await api.post('/auth/login', { email, password });
   return response.data;
 };
