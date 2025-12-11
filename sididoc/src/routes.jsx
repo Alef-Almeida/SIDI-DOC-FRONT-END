@@ -1,21 +1,24 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from '../src/pages/Login/Login';
-import Home from '../src/pages/Home/Home';
+
+// Importando as páginas
+import Login from './pages/Login/Login';
+import Home from './pages/Home/Home';
+import Upload from './pages/Upload/Upload'; // <--- Adicionado o import correto
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* A rota raiz "/" vai carregar o Login */}
+        {/* Rota raiz redireciona para Login ou carrega Login direto */}
         <Route path="/" element={<Login />} />
         
-        {/* Se tentar acessar /login, também vai pro Login */}
         <Route path="/login" element={<Login />} />
 
-        <Route path='/home' element={<Home />} />
+        <Route path="/home" element={<Home />} />
 
-        {/* Exemplo futuro para Cadastro */}
-        {/* <Route path="/cadastro" element={<Cadastro />} /> */}
+        {/* Aqui usamos o componente <Upload /> que importamos */}
+        <Route path="/upload" element={<Upload />} />
+
       </Routes>
     </BrowserRouter>
   );
