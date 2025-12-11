@@ -51,13 +51,8 @@ function Login() {
 
     } catch (err) {
       console.error("Login error:", err);
-      // Capturamos a resposta do servidor
-      const status = err.response ? err.response.status : null;
       
-      // 400: Bad Request (Muitos backends usam isso para erro de validação)
-      // 401: Unauthorized (Senha errada)
-      // 404: Not Found (Usuário não existe)
-      if (status === 401 || status === 400 || status === 404) {
+      if (err.response && err.response.status === 401) {
         setError('E-mail ou senha incorretos.');
       } else if (err.code === "ERR_NETWORK") {
         setError('Sem conexão com o servidor. Verifique sua internet.');

@@ -1,19 +1,24 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login/Login'; // Ajuste o caminho conforme sua pasta
-import Home from './pages/Home/Home';    // Importando a Home
+
+// Importando as páginas
+import Login from './pages/Login/Login';
+import Home from './pages/Home/Home';
+import Upload from './pages/Upload/Upload'; // <--- Adicionado o import correto
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota padrão: redireciona para o login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Rota raiz redireciona para Login ou carrega Login direto */}
+        <Route path="/" element={<Login />} />
         
-        {/* Rota de Login */}
         <Route path="/login" element={<Login />} />
 
-        {/* Rota da Home (Dashboard) */}
         <Route path="/home" element={<Home />} />
+
+        {/* Aqui usamos o componente <Upload /> que importamos */}
+        <Route path="/upload" element={<Upload />} />
+
       </Routes>
     </BrowserRouter>
   );
