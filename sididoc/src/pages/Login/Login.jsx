@@ -2,22 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiFileText, FiAlertCircle } from 'react-icons/fi';
 
-// Import services
+// Services
 import { loginRequest } from '../../services/authService';
 
-// Import UI components
+// UI Components
 import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 
 function Login() {
-  // Form States (Standardized to English)
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');          // Antes: senha
-  const [rememberMe, setRememberMe] = useState(false);   // Antes: lembrar
-  const [showPassword, setShowPassword] = useState(false); // Antes: mostrarSenha
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
-  // UI Control States
-  const [isLoading, setIsLoading] = useState(false);     // Antes: loading
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
@@ -28,34 +26,49 @@ function Login() {
     setIsLoading(true);
 
     try {
-      // 1. Service Call (using standardized variables)
+      // 1. Chama o serviço de autenticação
       const data = await loginRequest(email, password);
 
-      // 2. Token Handling
+      // 2. Verifica e salva o token
       const token = data.token || data.accessToken;
 
       if (token) {
         localStorage.setItem('sidi_token', token);
+        
+        // Lógica de Fallback: Salva o nome para usar caso a API /users/me falhe
+        // Tenta pegar 'name' ou 'nome', se não tiver, usa o começo do email
+        const nameToSave = data.name || data.nome || email.split('@')[0];
+        localStorage.setItem('sidi_user_name', nameToSave);
 
-        // "Remember Me" Logic
+        if (data.role) {
+            localStorage.setItem('sidi_user_role', data.role);
+        }
+        
+        // Lógica do "Lembrar-me"
         if (rememberMe) {
           localStorage.setItem('sidi_email_saved', email);
         } else {
           localStorage.removeItem('sidi_email_saved');
         }
 
-        navigate('/home');
+        if (data.role === 'SUPER_ADMIN') {
+            navigate('/admin');
+        } else {
+            navigate('/home');
+        }
       } else {
         setError('Erro de protocolo: Token não recebido.');
       }
 
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Erro no login:", err);
       
-      if (err.response && err.response.status === 401) {
+      const status = err.response ? err.response.status : null;
+
+      if (status === 401 || status === 400 || status === 404) {
         setError('E-mail ou senha incorretos.');
       } else if (err.code === "ERR_NETWORK") {
-        setError('Sem conexão com o servidor. Verifique sua internet.');
+        setError('Sem conexão com o servidor. Verifique se o backend está rodando.');
       } else {
         setError('Ocorreu um erro inesperado. Tente novamente.');
       }
@@ -67,10 +80,10 @@ function Login() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 font-sans">
       
-      {/* Main Card */}
+      {/* Card Principal */}
       <div className="bg-white p-8 md:p-10 rounded-2xl shadow-xl w-full max-w-md text-center border border-gray-100">
         
-        {/* Header */}
+        {/* Cabeçalho com Logo */}
         <div className="mb-8">
           <div className="bg-primary w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm">
             <FiFileText size={24} color="white" />
@@ -79,10 +92,10 @@ function Login() {
           <p className="text-gray-500 text-sm">Acesse sua conta</p>
         </div>
 
-        {/* Login Form */}
+        {/* Formulário */}
         <form onSubmit={handleLogin} className="text-left space-y-5">
           
-          {/* Error Alert */}
+          {/* Alerta de Erro */}
           {error && (
             <div className="flex items-center gap-2 bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100 animate-pulse">
                 <FiAlertCircle size={18} /> 
@@ -90,7 +103,7 @@ function Login() {
             </div>
           )}
 
-          {/* Email Input */}
+          {/* Input E-mail */}
           <Input 
             label="Email"
             type="email"
@@ -102,12 +115,12 @@ function Login() {
             required
           />
 
-          {/* Password Input */}
+          {/* Input Senha */}
           <Input 
-            label="Senha" // Label stays in PT-BR for the user
+            label="Senha"
             type={showPassword ? "text" : "password"}
             placeholder="••••••••"
-            value={password} // State is English
+            value={password}
             onChange={(e) => setPassword(e.target.value)}
             icon={FiLock}
             disabled={isLoading}
@@ -124,7 +137,7 @@ function Login() {
             }
           />
 
-          {/* Options (Checkbox & Forgot Password) */}
+          {/* Opções Extras */}
           <div className="flex justify-between items-center text-sm pt-1">
             <label className="flex items-center gap-2 text-gray-500 cursor-pointer select-none hover:text-gray-700">
               <input 
@@ -141,14 +154,14 @@ function Login() {
             </a>
           </div>
         
-          {/* Submit Button */}
+          {/* Botão Entrar */}
           <Button type="submit" isLoading={isLoading}>
             Entrar
           </Button>
 
         </form>
 
-        {/* Footer */}
+        {/* Rodapé */}
         <footer className="text-[10px] text-gray-400 leading-tight mx-auto max-w-[250px] pt-6">
           Seus dados estão protegidos com segurança de nível corporativo
         </footer>
