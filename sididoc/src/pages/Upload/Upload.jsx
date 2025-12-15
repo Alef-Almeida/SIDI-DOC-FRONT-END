@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 
-// Importando ícones do pacote Feather (React Icons)
 import {
   FiArrowLeft,
   FiFileText,
@@ -23,13 +22,14 @@ export default function Upload() {
   const [errors, setErrors] = useState([]);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const MAX_FILE_SIZE_MB = 50;
 
   // ============================================================
-  // LÓGICA (Idêntica ao original)
+  // FUNÇÕES AUXILIARES
   // ============================================================
   function openFileDialog() {
     fileInputRef.current?.click();
@@ -96,28 +96,29 @@ export default function Upload() {
     setUploadSuccess(false);
   }
 
+  // ============================================================
+  // UPLOAD REAL
+  // ============================================================
   async function handleUpload() {
     const newErrors = [];
 
     if (!setor) newErrors.push("Selecione um setor.");
     if (!tipoDocumento) newErrors.push("Selecione o tipo de documento.");
-    if (selectedFiles.length === 0)
-      newErrors.push("Selecione pelo menos um arquivo.");
+    if (selectedFiles.length === 0) newErrors.push("Selecione pelo menos um arquivo.");
 
+    // valida tipo escolhido x tipo real
     if (selectedFiles.length > 0) {
       const file = selectedFiles[0].file;
       const isPdf = file.type === "application/pdf";
       const isImage = file.type.startsWith("image/");
 
-      if (tipoDocumento === "pdf" && !isPdf)
-        newErrors.push(
-          "Você selecionou 'PDF', mas o arquivo enviado não é PDF."
-        );
+      if (tipoDocumento === "pdf" && !isPdf) {
+        newErrors.push("Você selecionou 'PDF', mas o arquivo enviado não é PDF.");
+      }
 
-      if (tipoDocumento === "imagem" && !isImage)
-        newErrors.push(
-          "Você selecionou 'Imagem (JPG/PNG)', mas o arquivo enviado não é imagem."
-        );
+      if (tipoDocumento === "imagem" && !isImage) {
+        newErrors.push("Você selecionou 'Imagem (JPG/PNG)', mas o arquivo enviado não é imagem.");
+      }
     }
 
     if (newErrors.length > 0) {
@@ -126,25 +127,55 @@ export default function Upload() {
       return;
     }
 
+    // pega token salvo no login
+    const token = localStorage.getItem("sidi_token");
+    if (!token) {
+      setErrors(["Você precisa estar logada para fazer upload. Faça login novamente."]);
+      setUploadSuccess(false);
+      return;
+    }
+
     try {
+      setIsUploading(true);
       setErrors([]);
       setUploadSuccess(false);
 
       const formData = new FormData();
       formData.append("file", selectedFiles[0].file);
+
+      // Se o backend NÃO espera setor/tipo, deixe comentado.
+      // Se no futuro ele aceitar, basta descomentar:
       // formData.append("setor", setor);
       // formData.append("tipo", tipoDocumento);
 
-      console.log("Enviando...", formData);
+      const response = await api.post("/documents/upload", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // NÃO setar Content-Type manualmente aqui!
+        },
+      });
 
-      // -- Simulação de envio --
-      // const response = await api.post("/documents/upload", formData...);
-
-      setTimeout(() => setUploadSuccess(true), 1000);
+      console.log("Upload OK:", response.data);
+      setUploadSuccess(true);
     } catch (error) {
       console.error("Erro ao enviar arquivo:", error);
-      setErrors(["Erro ao enviar arquivo. Tente novamente."]);
+
+      let msg = "Erro ao enviar arquivo. Tente novamente.";
+
+      if (error.response) {
+        // backend respondeu com erro HTTP
+        if (error.response.status === 401) msg = "Não autorizado. Faça login novamente.";
+        else if (error.response.data?.message) msg = error.response.data.message;
+        else if (error.response.data?.error) msg = error.response.data.error;
+        else msg = `Erro HTTP ${error.response.status}`;
+      } else if (error.code === "ERR_NETWORK") {
+        msg = "Erro de rede: confirme se o BACK está rodando em http://localhost:8080";
+      }
+
+      setErrors([msg]);
       setUploadSuccess(false);
+    } finally {
+      setIsUploading(false);
     }
   }
 
@@ -153,11 +184,9 @@ export default function Upload() {
   // ============================================================
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
-      {/* HEADER / TOPBAR */}
       <header className="flex items-center gap-4 px-6 md:px-20 h-14 border-b border-gray-200 bg-white">
-        {/* Botão Voltar (Pode usar Link to="/dashboard" se preferir) */}
         <button
-          onClick={() => navigate(-1)} /* O -1 significa "voltar uma página" */
+          onClick={() => navigate(-1)}
           className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
         >
           <FiArrowLeft size={20} />
@@ -171,24 +200,15 @@ export default function Upload() {
         </div>
       </header>
 
-      {/* MAIN CONTENT */}
       <main className="px-6 md:px-20 py-8">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">
-            Upload de Documentos
-          </h1>
-          <p className="text-sm text-gray-500">
-            Envie seus documentos para digitalização automática.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">Upload de Documentos</h1>
+          <p className="text-sm text-gray-500">Envie seus documentos para digitalização automática.</p>
         </header>
 
-        {/* FILTROS */}
         <section className="mt-6 grid grid-cols-1 md:grid-cols-[1.5fr_1fr] gap-4 max-w-4xl">
-          {/* Select Setor */}
           <div className="flex flex-col">
-            <label className="text-[13px] font-semibold mb-1.5 text-gray-900">
-              Setor
-            </label>
+            <label className="text-[13px] font-semibold mb-1.5 text-gray-900">Setor</label>
             <div className="relative">
               <select
                 value={setor}
@@ -202,18 +222,12 @@ export default function Upload() {
                 <option value="saude">Saúde</option>
                 <option value="outros">Outros</option>
               </select>
-              <FiChevronDown
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                size={18}
-              />
+              <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
             </div>
           </div>
 
-          {/* Select Tipo */}
           <div className="flex flex-col">
-            <label className="text-[13px] font-semibold mb-1.5 text-gray-900">
-              Tipo de Documento
-            </label>
+            <label className="text-[13px] font-semibold mb-1.5 text-gray-900">Tipo de Documento</label>
             <div className="relative">
               <select
                 value={tipoDocumento}
@@ -223,15 +237,11 @@ export default function Upload() {
                 <option value="pdf">PDF</option>
                 <option value="imagem">Imagem (JPG/PNG)</option>
               </select>
-              <FiChevronDown
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                size={18}
-              />
+              <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
             </div>
           </div>
         </section>
 
-        {/* MENSAGENS DE ERRO */}
         {errors.length > 0 && (
           <div className="mt-5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex flex-col gap-1">
             {errors.map((e, i) => (
@@ -243,7 +253,6 @@ export default function Upload() {
           </div>
         )}
 
-        {/* MENSAGEM DE SUCESSO */}
         {uploadSuccess && (
           <div className="mt-5 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm flex items-center gap-2">
             <FiCheckCircle size={16} />
@@ -251,22 +260,15 @@ export default function Upload() {
           </div>
         )}
 
-        {/* ÁREA DE DROP (DROPZONE) */}
         <section className="mt-7">
           <div
-            className={`
-              relative overflow-hidden rounded-[18px] border-2 border-dashed p-12 text-center transition-all duration-200 ease-in-out
-              ${
-                isDragging
-                  ? "border-[#00bdd6] bg-[#e0faff]"
-                  : "border-gray-300 bg-[#f9fbfd]"
-              }
-            `}
+            className={`relative overflow-hidden rounded-[18px] border-2 border-dashed p-12 text-center transition-all duration-200 ease-in-out ${
+              isDragging ? "border-[#00bdd6] bg-[#e0faff]" : "border-gray-300 bg-[#f9fbfd]"
+            }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Input Invisível */}
             <input
               ref={fileInputRef}
               type="file"
@@ -276,7 +278,6 @@ export default function Upload() {
               onChange={handleFileChange}
             />
 
-            {/* Conteúdo Dinâmico */}
             {selectedFiles.length > 0 ? (
               <div className="relative inline-block">
                 {selectedFiles[0].previewUrl ? (
@@ -294,14 +295,12 @@ export default function Upload() {
                   </div>
                 )}
 
-                {/* Nome do arquivo */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <p className="px-4 text-center text-sm font-bold text-gray-800 drop-shadow-md bg-white/50 py-1 rounded">
                     {selectedFiles[0].file.name}
                   </p>
                 </div>
 
-                {/* Botão de Remover (X) */}
                 <button
                   onClick={clearFile}
                   className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-900 shadow-md transition-colors hover:bg-red-50 hover:text-red-600 border border-gray-100 cursor-pointer"
@@ -311,15 +310,12 @@ export default function Upload() {
                 </button>
               </div>
             ) : (
-              // Estado Vazio
               <>
                 <div className="flex justify-center mb-3">
                   <FiUploadCloud size={40} className="text-[#00bdd6]" />
                 </div>
 
-                <p className="text-base font-semibold text-gray-900">
-                  Arraste seus arquivos aqui
-                </p>
+                <p className="text-base font-semibold text-gray-900">Arraste seus arquivos aqui</p>
                 <p className="my-2.5 text-[13px] text-gray-500">ou</p>
 
                 <button
@@ -337,14 +333,13 @@ export default function Upload() {
           </div>
         </section>
 
-        {/* BOTÃO DE ENVIO */}
         <div className="mt-7">
           <button
             onClick={handleUpload}
             className="px-8 py-3.5 rounded-full bg-[#00bdd6] text-white text-base font-semibold transition-transform hover:bg-[#009eb8] active:scale-[0.98] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            disabled={selectedFiles.length === 0}
+            disabled={selectedFiles.length === 0 || isUploading}
           >
-            Enviar documentos
+            {isUploading ? "Enviando..." : "Enviar documentos"}
           </button>
         </div>
       </main>
