@@ -1,40 +1,68 @@
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../../services/api";
-
-// Importando ícones do pacote Feather (React Icons)
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
-  FiArrowLeft,
-  FiFileText,
   FiUploadCloud,
-  FiX,
-  FiChevronDown,
+  FiLayers,
+  FiTag,
+  FiFileText,
   FiCheckCircle,
-  FiAlertCircle,
 } from "react-icons/fi";
 
+// Serviços
+import { getAllCategories } from "../../services/adminService";
+import { getMySectors } from "../../services/authService";
+import { uploadDocument } from "../../services/documentService"; // <--- Importe o serviço real
+
+// Componentes
+import { PageHeader } from "../../components/PageHeader";
+import { Select } from "../../components/Select";
+import { Alert } from "../../components/Alert";
+import { Button } from "../../components/Button";
+import { FileDropzone } from "../../components/FileDropzone";
+
 export default function Upload() {
-  // ============================================================
-  // ESTADOS
-  // ============================================================
-  const [setor, setSetor] = useState("");
-  const [tipoDocumento, setTipoDocumento] = useState("pdf");
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Estados
+  const [currentSector, setCurrentSector] = useState(null);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [errors, setErrors] = useState([]);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const navigate = useNavigate();
-  const fileInputRef = useRef(null);
   const MAX_FILE_SIZE_MB = 50;
 
-  // ============================================================
-  // LÓGICA (Idêntica ao original)
-  // ============================================================
-  function openFileDialog() {
-    fileInputRef.current?.click();
-  }
+  // Carregamento Inicial
+  useEffect(() => {
+    async function loadInitialData() {
+      setIsLoadingData(true);
+      try {
+        // Busca Categorias
+        const cats = await getAllCategories();
+        setCategoriesList(cats || []);
 
+        // Define Setor (Apenas visualmente agora)
+        if (location.state && location.state.sector) {
+          setCurrentSector(location.state.sector);
+        } else {
+          const mySectors = await getMySectors();
+          if (mySectors && mySectors.length > 0) setCurrentSector(mySectors[0]);
+        }
+      } catch (error) {
+        setErrors(["Não foi possível carregar as informações necessárias."]);
+      } finally {
+        setIsLoadingData(false);
+      }
+    }
+    loadInitialData();
+  }, [location.state]);
+
+  // Manipulação de Arquivos
   function validateFiles(fileList) {
     const valid = [];
     const newErrors = [];
@@ -45,12 +73,16 @@ export default function Upload() {
       const isImage = file.type.startsWith("image/");
 
       if (!isPdf && !isImage) {
-        newErrors.push(`Arquivo "${file.name}" não é PDF ou imagem.`);
+        newErrors.push(
+          `O arquivo "${file.name}" não é um PDF ou Imagem válida.`
+        );
         return;
       }
 
       if (sizeMB > MAX_FILE_SIZE_MB) {
-        newErrors.push(`Arquivo "${file.name}" excede 50MB.`);
+        newErrors.push(
+          `O arquivo "${file.name}" excede o limite de ${MAX_FILE_SIZE_MB}MB.`
+        );
         return;
       }
 
@@ -64,290 +96,188 @@ export default function Upload() {
     return valid;
   }
 
-  function handleFiles(files) {
-    const valid = validateFiles(files);
+  function handleFiles(fileList) {
+    const valid = validateFiles(fileList);
     setSelectedFiles(valid);
     setUploadSuccess(false);
   }
 
-  function handleDragOver(e) {
-    e.preventDefault();
-    setIsDragging(true);
-  }
-
-  function handleDragLeave(e) {
-    e.preventDefault();
-    setIsDragging(false);
-  }
-
-  function handleDrop(e) {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
-  }
-
-  function handleFileChange(e) {
-    if (e.target.files) handleFiles(e.target.files);
-  }
-
-  function clearFile() {
-    setSelectedFiles([]);
-    setErrors([]);
-    setUploadSuccess(false);
-  }
-
+  // Envio
   async function handleUpload() {
     const newErrors = [];
-
-    if (!setor) newErrors.push("Selecione um setor.");
-    if (!tipoDocumento) newErrors.push("Selecione o tipo de documento.");
-    if (selectedFiles.length === 0)
-      newErrors.push("Selecione pelo menos um arquivo.");
-
-    if (selectedFiles.length > 0) {
-      const file = selectedFiles[0].file;
-      const isPdf = file.type === "application/pdf";
-      const isImage = file.type.startsWith("image/");
-
-      if (tipoDocumento === "pdf" && !isPdf)
-        newErrors.push(
-          "Você selecionou 'PDF', mas o arquivo enviado não é PDF."
-        );
-
-      if (tipoDocumento === "imagem" && !isImage)
-        newErrors.push(
-          "Você selecionou 'Imagem (JPG/PNG)', mas o arquivo enviado não é imagem."
-        );
+    
+    // 1. Validações
+    if (!currentSector) newErrors.push("Erro: Setor não identificado.");
+    
+    // Verifica se tem ID e se não é a string "Selecione..." ou vazio
+    if (!selectedCategoryId || selectedCategoryId === "") {
+        newErrors.push("Selecione uma categoria.");
     }
+    
+    if (selectedFiles.length === 0) newErrors.push("Selecione um arquivo.");
 
-    if (newErrors.length > 0) {
-      setErrors(newErrors);
-      setUploadSuccess(false);
-      return;
+    if (newErrors.length > 0) { 
+      setErrors(newErrors); 
+      return; 
     }
 
     try {
-      setErrors([]);
+      setErrors([]); 
       setUploadSuccess(false);
-
+      setIsLoadingData(true);
+      
       const formData = new FormData();
       formData.append("file", selectedFiles[0].file);
-      // formData.append("setor", setor);
-      // formData.append("tipo", tipoDocumento);
+      
+      // === A MÁGICA ACONTECE AQUI ===
+      // 1. Garante que é tratado como número no JS (ex: remove espaços, valida)
+      const idNumerico = Number(selectedCategoryId);
+      
+      if (isNaN(idNumerico)) {
+         throw new Error(`ID da categoria inválido: ${selectedCategoryId}`);
+      }
 
-      console.log("Enviando...", formData);
+      // 2. O FormData exige String, mas tem que ser a String de um número (ex: "5")
+      // Se mandar "Memorando", o Java explode. Se mandar "5", o Java converte para Long 5.
+      formData.append("categoryId", String(idNumerico)); 
 
-      // -- Simulação de envio --
-      // const response = await api.post("/documents/upload", formData...);
+      console.log("Enviando para o Back:", { 
+        file: selectedFiles[0].file.name,
+        categoryIdEnviado: String(idNumerico) // Deve aparecer um número entre aspas, ex: "1"
+      });
+      
+      // Chamada API
+      await uploadDocument(formData);
+      
+      // Sucesso
+      setUploadSuccess(true); 
+      setSelectedFiles([]);      
+      setSelectedCategoryId(""); 
 
-      setTimeout(() => setUploadSuccess(true), 1000);
     } catch (error) {
-      console.error("Erro ao enviar arquivo:", error);
-      setErrors(["Erro ao enviar arquivo. Tente novamente."]);
-      setUploadSuccess(false);
+      console.error("Erro upload:", error);
+      const msg = error.response?.data?.message || error.message || "Erro ao enviar arquivo.";
+      setErrors([msg]);
+    } finally {
+      setIsLoadingData(false);
     }
   }
 
-  // ============================================================
-  // RENDERIZAÇÃO
-  // ============================================================
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900">
-      {/* HEADER / TOPBAR */}
-      <header className="flex items-center gap-4 px-6 md:px-20 h-14 border-b border-gray-200 bg-white">
-        {/* Botão Voltar (Pode usar Link to="/dashboard" se preferir) */}
-        <button
-          onClick={() => navigate(-1)} /* O -1 significa "voltar uma página" */
-          className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-        >
-          <FiArrowLeft size={20} />
-        </button>
+    <div className="min-h-screen bg-white font-sans text-gray-900 px-6 md:px-20 py-8 pb-20">
+      <PageHeader
+        title="Upload de Documentos"
+        subtitle="Preencha os dados abaixo para digitalizar e arquivar o documento."
+      />
 
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-[#00bdd6] flex items-center justify-center text-white shadow-sm">
-            <FiFileText size={22} />
-          </div>
-          <span className="font-bold text-lg tracking-tight">SIDI-DOC</span>
+      {isLoadingData ? (
+        <div className="py-10 text-gray-500 text-center animate-pulse">
+          Carregando informações...
         </div>
-      </header>
-
-      {/* MAIN CONTENT */}
-      <main className="px-6 md:px-20 py-8">
-        <header className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">
-            Upload de Documentos
-          </h1>
-          <p className="text-sm text-gray-500">
-            Envie seus documentos para digitalização automática.
-          </p>
-        </header>
-
-        {/* FILTROS */}
-        <section className="mt-6 grid grid-cols-1 md:grid-cols-[1.5fr_1fr] gap-4 max-w-4xl">
-          {/* Select Setor */}
-          <div className="flex flex-col">
-            <label className="text-[13px] font-semibold mb-1.5 text-gray-900">
-              Setor
-            </label>
-            <div className="relative">
-              <select
-                value={setor}
-                onChange={(e) => setSetor(e.target.value)}
-                className="w-full py-3 pl-4 pr-10 rounded-full border border-gray-200 bg-white text-sm text-gray-900 appearance-none outline-none focus:border-[#00bdd6] focus:ring-2 focus:ring-[#00bdd6]/15 hover:bg-gray-50 transition-all cursor-pointer"
-              >
-                <option value="">Selecione um setor...</option>
-                <option value="administrativo">Administrativo</option>
-                <option value="financeiro">Financeiro</option>
-                <option value="educacao">Educação</option>
-                <option value="saude">Saúde</option>
-                <option value="outros">Outros</option>
-              </select>
-              <FiChevronDown
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                size={18}
-              />
-            </div>
-          </div>
-
-          {/* Select Tipo */}
-          <div className="flex flex-col">
-            <label className="text-[13px] font-semibold mb-1.5 text-gray-900">
-              Tipo de Documento
-            </label>
-            <div className="relative">
-              <select
-                value={tipoDocumento}
-                onChange={(e) => setTipoDocumento(e.target.value)}
-                className="w-full py-3 pl-4 pr-10 rounded-full border border-gray-200 bg-white text-sm text-gray-900 appearance-none outline-none focus:border-[#00bdd6] focus:ring-2 focus:ring-[#00bdd6]/15 hover:bg-gray-50 transition-all cursor-pointer"
-              >
-                <option value="pdf">PDF</option>
-                <option value="imagem">Imagem (JPG/PNG)</option>
-              </select>
-              <FiChevronDown
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                size={18}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* MENSAGENS DE ERRO */}
-        {errors.length > 0 && (
-          <div className="mt-5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex flex-col gap-1">
-            {errors.map((e, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <FiAlertCircle size={16} className="shrink-0" />
-                <span>{e}</span>
+      ) : (
+        <>
+          {/* Formulários */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mb-8">
+            {/* 1. Setor Read-Only (Apenas informativo) */}
+            <div className="flex flex-col">
+              <label className="text-gray-700 font-bold mb-1.5 text-xs uppercase tracking-wide flex items-center gap-1.5">
+                <FiLayers className="text-[#00bdd6]" size={16} />
+                Setor de Destino
+              </label>
+              <div className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 font-medium cursor-not-allowed flex items-center justify-between">
+                <span className="truncate">
+                  {currentSector ? currentSector.name : "Nenhum"}
+                </span>
+                <FiCheckCircle className="text-gray-400 shrink-0" size={18} />
               </div>
-            ))}
-          </div>
-        )}
+            </div>
 
-        {/* MENSAGEM DE SUCESSO */}
-        {uploadSuccess && (
-          <div className="mt-5 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm flex items-center gap-2">
-            <FiCheckCircle size={16} />
-            <span>Arquivo enviado com sucesso!</span>
-          </div>
-        )}
+            {/* 2. Categoria */}
+            <Select
+              label="Categoria"
+              icon={FiTag}
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+            >
+              <option value="">Selecione...</option>
 
-        {/* ÁREA DE DROP (DROPZONE) */}
-        <section className="mt-7">
-          <div
-            className={`
-              relative overflow-hidden rounded-[18px] border-2 border-dashed p-12 text-center transition-all duration-200 ease-in-out
-              ${
-                isDragging
-                  ? "border-[#00bdd6] bg-[#e0faff]"
-                  : "border-gray-300 bg-[#f9fbfd]"
-              }
-            `}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {/* Input Invisível */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,image/*"
-              className="hidden"
-              onChange={handleFileChange}
+              {/* O ERRO PROVAVELMENTE ESTAVA AQUI: value={c.name} */}
+              {categoriesList.map((c) => (
+                // CORREÇÃO: value={c.id} (O ID, não o nome!)
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </section>
+
+          {/* Feedback */}
+          {errors.length > 0 && (
+            <div className="mb-6">
+              <Alert type="error" message={errors.join(" ")} />
+            </div>
+          )}
+
+          {uploadSuccess && (
+            <div className="mb-6">
+              <Alert
+                type="success"
+                message={`Arquivo enviado com sucesso para ${currentSector?.name}!`}
+              />
+            </div>
+          )}
+
+          {/* Dropzone */}
+          <section>
+            <FileDropzone
+              selectedFiles={selectedFiles}
+              onFilesSelected={handleFiles}
+              onClear={() => {
+                setSelectedFiles([]);
+                setUploadSuccess(false);
+              }}
+              isDragging={isDragging}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+              }}
+              maxSizeMB={MAX_FILE_SIZE_MB}
             />
+          </section>
 
-            {/* Conteúdo Dinâmico */}
-            {selectedFiles.length > 0 ? (
-              <div className="relative inline-block">
-                {selectedFiles[0].previewUrl ? (
-                  <img
-                    src={selectedFiles[0].previewUrl}
-                    alt="preview"
-                    className="w-60 max-w-full rounded-2xl border border-gray-200 opacity-40 blur-[2px]"
-                  />
-                ) : (
-                  <div className="flex h-40 w-60 items-center justify-center rounded-2xl border border-gray-200 bg-white opacity-70">
-                    <div className="flex flex-col items-center gap-2 text-gray-600">
-                      <FiFileText size={40} />
-                      <span className="font-semibold">PDF Selecionado</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Nome do arquivo */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="px-4 text-center text-sm font-bold text-gray-800 drop-shadow-md bg-white/50 py-1 rounded">
-                    {selectedFiles[0].file.name}
-                  </p>
-                </div>
-
-                {/* Botão de Remover (X) */}
-                <button
-                  onClick={clearFile}
-                  className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-900 shadow-md transition-colors hover:bg-red-50 hover:text-red-600 border border-gray-100 cursor-pointer"
-                  title="Remover arquivo"
-                >
-                  <FiX size={18} />
-                </button>
-              </div>
-            ) : (
-              // Estado Vazio
-              <>
-                <div className="flex justify-center mb-3">
-                  <FiUploadCloud size={40} className="text-[#00bdd6]" />
-                </div>
-
-                <p className="text-base font-semibold text-gray-900">
-                  Arraste seus arquivos aqui
-                </p>
-                <p className="my-2.5 text-[13px] text-gray-500">ou</p>
-
-                <button
-                  onClick={openFileDialog}
-                  className="px-6 py-2.5 rounded-full bg-[#00bdd6] text-white text-sm font-semibold transition-colors hover:bg-[#009eb8] cursor-pointer"
-                >
-                  Selecionar Arquivos
-                </button>
-
-                <p className="mt-4 text-xs text-gray-500">
-                  Formatos aceitos: PDF, JPG, PNG (máx. {MAX_FILE_SIZE_MB} MB)
-                </p>
-              </>
-            )}
+          {/* Botão */}
+          <div className="mt-8 flex justify-center">
+            <Button
+              onClick={handleUpload}
+              className="w-auto px-10 bg-[#00bdd6] hover:bg-[#009eb8]"
+              disabled={
+                selectedFiles.length === 0 ||
+                !currentSector ||
+                !selectedCategoryId ||
+                isLoadingData // Desabilita se estiver enviando
+              }
+            >
+              {isLoadingData ? (
+                "Enviando..."
+              ) : (
+                <>
+                  <FiUploadCloud size={20} className="mr-2" />
+                  Enviar Documento
+                </>
+              )}
+            </Button>
           </div>
-        </section>
-
-        {/* BOTÃO DE ENVIO */}
-        <div className="mt-7">
-          <button
-            onClick={handleUpload}
-            className="px-8 py-3.5 rounded-full bg-[#00bdd6] text-white text-base font-semibold transition-transform hover:bg-[#009eb8] active:scale-[0.98] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            disabled={selectedFiles.length === 0}
-          >
-            Enviar documentos
-          </button>
-        </div>
-      </main>
+        </>
+      )}
     </div>
   );
 }

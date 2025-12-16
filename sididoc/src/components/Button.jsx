@@ -1,19 +1,22 @@
-export function Button({ children, isLoading, ...props }) {
+import React from 'react';
+
+export function Button({ children, isLoading, className = "", ...props }) {
   return (
     <button 
       className={`
-        w-full py-3 rounded-lg font-bold text-base transition-all shadow-md active:scale-[0.98]
-        flex items-center justify-center
-        ${isLoading 
-          ? 'bg-gray-400 cursor-not-allowed' 
-          : 'bg-primary text-white hover:brightness-95'
-        }
+        h-11 px-6 rounded-lg
+        flex items-center justify-center gap-2
+        font-bold text-sm text-white
+        bg-[#00bdd6] shadow-sm border border-transparent
+        transition-all hover:brightness-95 active:scale-[0.98]
+        disabled:bg-gray-300 disabled:cursor-not-allowed disabled:shadow-none
+        whitespace-nowrap
+        ${className}
       `}
       disabled={isLoading}
       {...props}
     >
       {isLoading ? (
-        // Um spinner simples feito com CSS/Tailwind
         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
       ) : (
         children
