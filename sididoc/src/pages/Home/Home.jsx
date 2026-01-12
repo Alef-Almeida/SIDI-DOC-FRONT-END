@@ -1,130 +1,159 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   FiFileText,
   FiUploadCloud,
   FiSearch,
-  FiMenu,
-  FiX,
-  FiDownload,
   FiLogOut,
   FiChevronDown,
   FiLayers,
+  FiFilter,
+  FiDownload,
+  FiX
 } from "react-icons/fi";
 
-// === ALTERAÇÃO 1: Importe a função correta ===
+// Serviços
 import { getMe, getMySectors, switchSector } from "../../services/authService";
-import { getDocumentsBySector } from "../../services/documentService"; // <--- NOVO
+import { 
+  getDocumentsBySector, 
+  filterDocuments, 
+  getCategoriesBySector 
+} from "../../services/documentService"; 
 import api from "../../services/api";
-// import { getAllDocuments } from "../../services/documentService"; // <--- REMOVIDO
+
+// Componentes
 import { ActionCard } from "../../components/ActionCard";
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isSectorOpen, setIsSectorOpen] = useState(false);
+  // === ESTADOS DE DADOS ===
   const [userName, setUserName] = useState("...");
   const [sectors, setSectors] = useState([]);
   const [selectedSector, setSelectedSector] = useState(null);
-
-  // ESTADO DOS DOCUMENTOS
+  
   const [documents, setDocuments] = useState([]);
+  const [categories, setCategories] = useState([]); // Lista para o dropdown
+
+  // === ESTADOS VISUAIS E DE FILTRO ===
+  const [isSectorOpen, setIsSectorOpen] = useState(false);
   const [isLoadingDocs, setIsLoadingDocs] = useState(true);
 
+  // Filtros de Categoria
+  const [selectedCategory, setSelectedCategory] = useState(null); // Objeto categoria selecionado
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);    // Dropdown aberto?
+  const [categorySearch, setCategorySearch] = useState("");       // Texto da busca interna do dropdown
+  
   const sectorDropdownRef = useRef(null);
+  const categoryDropdownRef = useRef(null);
 
-  // === FUNÇÕES AUXILIARES DE FORMATAÇÃO ===
+  // === HELPERS DE FORMATAÇÃO ===
   const formatBytes = (bytes, decimals = 2) => {
     if (!bytes) return "0 Bytes";
     const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " + sizes[i];
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("pt-BR");
   };
-  // ========================================
 
-  // === ALTERAÇÃO 2: Função reutilizável para buscar documentos ===
-  const fetchDocuments = async () => {
+  // === LÓGICA PRINCIPAL DE BUSCA ===
+  const fetchDocuments = async (catId = null) => {
     setIsLoadingDocs(true);
     try {
-      // Busca os 5 documentos mais recentes do setor atual (via Token)
-      const data = await getDocumentsBySector(0, 5);
-      
-      // O Spring retorna Page<DTO>, então a lista real está em 'content'
-      // Se sua API retornar array direto, use 'data' apenas.
-      setDocuments(data.content || data || []); 
+      let data = [];
+
+      // CENÁRIO 1: TEM FILTRO DE CATEGORIA? (Usa endpoint /filter)
+      if (catId) {
+        if (!selectedSector?.id) return; // Segurança
+
+        console.log(`Buscando via Filtro -> Setor: ${selectedSector.id}, Categoria: ${catId}`);
+        // Chama seu endpoint que retorna List<DTO> direto
+        const list = await filterDocuments(selectedSector.id, catId);
+        data = list || [];
+      } 
+      // CENÁRIO 2: BUSCA GERAL (Usa endpoint /find-by-sector paginado)
+      else {
+        console.log("Buscando via Paginação Padrão...");
+        const pageData = await getDocumentsBySector(0, 10);
+        // O Spring Page retorna o array dentro de .content
+        data = pageData.content || pageData || [];
+      }
+
+      setDocuments(data);
     } catch (err) {
-      console.error("Erro ao buscar documentos do setor", err);
+      console.error("Erro ao buscar documentos:", err);
       setDocuments([]);
     } finally {
       setIsLoadingDocs(false);
     }
   };
 
+  // Carrega lista de categorias para popular o dropdown
+  const fetchCategories = async () => {
+    try {
+      const cats = await getCategoriesBySector();
+      setCategories(cats || []);
+    } catch (err) {
+      console.warn("Não foi possível carregar categorias.");
+    }
+  };
+
+  // === INICIALIZAÇÃO ===
   useEffect(() => {
-    async function fetchData() {
+    async function loadInitialData() {
       try {
-        // 1. Dados do Usuário
-        getMe()
-          .then((userData) => {
-            const fullName = userData.name || userData.nome || "";
-            const names = fullName.trim().split(" ");
-            let formattedName =
-              names.length >= 2
-                ? `${names[0]} ${names[names.length - 1]}`
-                : names[0];
-            setUserName(formattedName);
-          })
-          .catch(() => setUserName("Visitante"));
+        // 1. Usuário
+        const user = await getMe();
+        
+        const names = user.name?.trim().split(" ") || [];
+        const formattedName = names.length > 1 
+          ? `${names[0]} ${names[names.length - 1]}` 
+          : names[0] || "Usuário";
+
+        setUserName(formattedName);
 
         // 2. Setores
-        getMySectors()
-          .then((sectorsData) => {
-            setSectors(sectorsData);
-            if (sectorsData && sectorsData.length > 0)
-              setSelectedSector(sectorsData[0]);
-          })
-          .catch(() => setSectors([]));
+        const mySectors = await getMySectors();
+        setSectors(mySectors);
+        
+        // Define setor inicial (visual) se houver
+        if (mySectors.length > 0) {
+           // Idealmente, pegamos o setor atual do token, mas assumimos o primeiro da lista ou o atual
+           setSelectedSector(mySectors[0]); 
+        }
 
-        // 3. DOCUMENTOS REAIS (Agora chama a função nova)
-        // === ALTERAÇÃO 3: Chama a função centralizada ===
-        await fetchDocuments(); 
+        // 3. Carrega dados dependentes
+        await fetchCategories();
+        await fetchDocuments(null); // Busca inicial sem filtro
 
       } catch (error) {
-        console.error(error);
+        console.error("Erro na inicialização:", error);
+        // Se der erro de auth, redireciona
+        // navigate("/login"); 
       }
     }
-    fetchData();
+    loadInitialData();
 
+    // Fecha dropdowns ao clicar fora
     function handleClickOutside(event) {
-      if (
-        sectorDropdownRef.current &&
-        !sectorDropdownRef.current.contains(event.target)
-      )
-        setIsSectorOpen(false);
+      if (sectorDropdownRef.current && !sectorDropdownRef.current.contains(event.target)) setIsSectorOpen(false);
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target)) setIsCategoryOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
+  // === HANDLERS (AÇÕES) ===
 
+  // 1. Troca de Setor
   const handleSelectSector = async (sec) => {
     setIsSectorOpen(false);
-
     try {
-      console.log(`Trocando para o setor: ${sec.name} (ID: ${sec.id})...`);
-
       const jwtData = await switchSector(sec.id);
       const newToken = jwtData.token || jwtData.accessToken;
 
@@ -132,186 +161,252 @@ export default function Dashboard() {
         localStorage.setItem("sidi_token", newToken);
         api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
         setSelectedSector(sec);
-
-        console.log("Token atualizado. Recarregando documentos...");
-
-        // === ALTERAÇÃO 4: Atualiza a lista IMEDIATAMENTE após trocar setor ===
-        await fetchDocuments(); 
-
-      } else {
-        console.error("O Back-end não retornou um token válido.");
+        
+        // RESETAR FILTROS ao trocar de setor (pois as categorias podem ser outras)
+        setSelectedCategory(null);
+        setCategorySearch("");
+        
+        // Recarregar dados
+        await fetchCategories();
+        await fetchDocuments(null);
       }
     } catch (error) {
-      console.error("Erro ao trocar de setor:", error);
-      alert("Não foi possível trocar de setor. Tente relogar.");
+      alert("Erro ao trocar setor. Tente relogar.");
     }
   };
 
+  // 2. Seleção de Categoria (Filtro)
+  const handleSelectCategory = (cat) => {
+    setSelectedCategory(cat);      // Atualiza visual
+    setIsCategoryOpen(false);      // Fecha dropdown
+    setCategorySearch("");         // Limpa busca visual
+    fetchDocuments(cat.id);        // CHAMA A API COM O FILTRO
+  };
+
+  // 3. Limpar Filtro
+  const handleClearCategory = (e) => {
+    e.stopPropagation();           // Evita abrir o dropdown ao clicar no X
+    setSelectedCategory(null);
+    fetchDocuments(null);          // CHAMA A API PADRÃO (SEM FILTRO)
+  };
+
+  // 4. Logout
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/");
+  };
+
+  // Lógica de busca visual dentro do dropdown de categorias
+  const filteredCategoriesForDropdown = categories.filter(cat => 
+    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
-      {/* HEADER */}
+      
+      {/* === HEADER === */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-cyan-500 shadow-sm shrink-0">
-              <FiFileText className="w-4 h-4 md:w-5 md:h-5 text-white" />
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-cyan-500 flex items-center justify-center text-white shadow-sm">
+              <FiFileText size={20} />
             </div>
-            <h1 className="text-xl font-bold text-gray-800 hidden sm:block whitespace-nowrap">
-              SIDI-DOC
-            </h1>
+            <h1 className="text-xl font-bold text-gray-800 hidden sm:block">SIDI-DOC</h1>
           </div>
           
-          <div className="flex items-center justify-end gap-2 md:gap-4 shrink-1 min-w-0">
+          <div className="flex items-center gap-4">
+            {/* Dropdown de Setor */}
             <div className="relative" ref={sectorDropdownRef}>
               <button
                 onClick={() => setIsSectorOpen(!isSectorOpen)}
-                className="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition shadow-sm max-w-[110px] sm:max-w-[160px] md:max-w-[200px]"
-                disabled={sectors.length === 0}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition shadow-sm"
               >
-                <div className="p-0.5 md:p-1 bg-cyan-50 rounded text-cyan-600 shrink-0">
-                  <FiLayers className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                </div>
-                <span className="text-[10px] md:text-xs font-semibold text-gray-700 truncate">
-                  {selectedSector
-                    ? selectedSector.name
-                    : sectors.length === 0
-                    ? "Sem Setor"
-                    : "Setor..."}
+                <FiLayers className="text-cyan-600" />
+                <span className="text-xs font-semibold text-gray-700 max-w-[150px] truncate">
+                  {selectedSector ? selectedSector.name : "Selecionar Setor..."}
                 </span>
-                <FiChevronDown
-                  size={12}
-                  className={`text-gray-400 shrink-0 transition-transform ${
-                    isSectorOpen ? "rotate-180" : ""
-                  }`}
-                />
+                <FiChevronDown size={14} className="text-gray-400" />
               </button>
-              {isSectorOpen && sectors.length > 0 && (
-                <div className="absolute top-full right-0 mt-2 w-48 md:w-56 bg-white border border-gray-100 rounded-xl shadow-xl py-1 z-50">
+              
+              {isSectorOpen && (
+                <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl py-1 z-50">
                   {sectors.map((sec) => (
-                    <button
-                      key={sec.id}
-                      onClick={() => handleSelectSector(sec)}
-                      className={`w-full text-left px-4 py-2.5 text-xs font-medium hover:bg-cyan-50 transition flex items-center gap-2 truncate ${
-                        selectedSector?.name === sec.name
-                          ? "text-cyan-600 bg-cyan-50/50"
-                          : "text-gray-600"
-                      }`}
+                    <button 
+                      key={sec.id} 
+                      onClick={() => handleSelectSector(sec)} 
+                      className={`w-full text-left px-4 py-2.5 text-xs hover:bg-cyan-50 transition ${selectedSector?.id === sec.id ? 'text-cyan-700 font-bold bg-cyan-50' : 'text-gray-600'}`}
                     >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                          selectedSector?.name === sec.name
-                            ? "bg-cyan-500"
-                            : "bg-gray-300"
-                        }`}
-                      ></span>
-                      <span className="truncate">{sec.name}</span>
+                      {sec.name}
                     </button>
                   ))}
                 </div>
               )}
             </div>
-            <div className="hidden lg:block h-6 w-px bg-gray-200"></div>
-            <div className="flex flex-col items-end min-w-0 shrink-0">
-              <span className="text-[10px] md:text-xs font-bold text-gray-700 truncate max-w-[70px] sm:max-w-[120px]">
-                <span className="hidden sm:inline">Olá, </span>
-                {userName}
-              </span>
+
+            <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+            
+            <div className="text-right hidden sm:block">
+               <p className="text-xs text-gray-500">Logado como</p>
+               <p className="text-sm font-bold text-gray-800">{userName}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-gray-400 hover:text-red-500 transition-colors shrink-0"
-            >
-              <FiLogOut className="w-4 h-4 md:w-5 md:h-5" />
+
+            <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 transition">
+              <FiLogOut size={20} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* CONTEÚDO */}
+      {/* === CONTEÚDO PRINCIPAL === */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">
-              Painel de Controle
-            </h2>
-            <p className="text-gray-500 text-sm mt-1">
-              Visualizando setor:{" "}
-              <strong className="text-cyan-600">
-                {selectedSector?.name || "Nenhum"}
-              </strong>
-            </p>
-          </div>
+        
+        {/* Título e Info */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-800">Painel de Controle</h2>
+          <p className="text-gray-500 text-sm mt-1">
+            Gerenciando documentos do setor: <strong className="text-cyan-600">{selectedSector?.name}</strong>
+          </p>
         </div>
 
+        {/* Cards de Ação */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-          <ActionCard
-            to="/upload"
-            state={{ sector: selectedSector }}
-            icon={FiUploadCloud}
-            title="Fazer Upload"
-            description="Envie novos documentos para o sistema."
+          <ActionCard 
+            to="/upload" 
+            state={{ sector: selectedSector }} 
+            icon={FiUploadCloud} 
+            title="Fazer Upload" 
+            description="Envie novos documentos para o sistema." 
           />
-          <ActionCard
-            to="/consultar"
-            icon={FiSearch}
-            title="Consultar Documentos"
-            description="Busque e filtre seus arquivos existentes."
-            colorClass="text-blue-500"
-            bgClass="bg-blue-50"
+          <ActionCard 
+            to="/consultar" 
+            icon={FiSearch} 
+            title="Consultar Documentos" 
+            description="Busca avançada e relatórios." 
+            colorClass="text-blue-500" 
+            bgClass="bg-blue-50" 
           />
         </div>
 
-        {/* TABELA DE DOCUMENTOS */}
+        {/* === ÁREA DA TABELA === */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          
+          {/* Barra de Ferramentas da Tabela */}
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h3 className="font-semibold text-gray-700">Documentos Recentes</h3>
+
+            {/* === FILTRO DE CATEGORIA COM PESQUISA === */}
+            <div className="relative w-full sm:w-72" ref={categoryDropdownRef}>
+              <div 
+                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                className={`flex items-center justify-between bg-white border px-3 py-2 rounded-lg cursor-pointer transition select-none ${isCategoryOpen ? 'border-cyan-500 ring-2 ring-cyan-100' : 'border-gray-200 hover:border-gray-300'}`}
+              >
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <FiFilter className={`shrink-0 ${selectedCategory ? 'text-cyan-600' : 'text-gray-400'}`} size={16} />
+                  <span className={`text-sm truncate ${selectedCategory ? 'text-cyan-700 font-medium' : 'text-gray-500'}`}>
+                    {selectedCategory ? selectedCategory.name : "Filtrar por Categoria"}
+                  </span>
+                </div>
+                
+                {selectedCategory ? (
+                  <button onClick={handleClearCategory} className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition">
+                    <FiX size={14} />
+                  </button>
+                ) : (
+                  <FiChevronDown size={16} className="text-gray-400" />
+                )}
+              </div>
+
+              {/* Dropdown Content */}
+              {isCategoryOpen && (
+                <div className="absolute top-full right-0 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden animate-fadeIn">
+                  {/* Campo de Busca Interno */}
+                  <div className="p-2 border-b border-gray-100 bg-gray-50/50">
+                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-md px-2 py-1.5 focus-within:border-cyan-400 focus-within:ring-1 focus-within:ring-cyan-200">
+                      <FiSearch className="text-gray-400" size={14} />
+                      <input 
+                        autoFocus
+                        type="text" 
+                        placeholder="Buscar categoria..." 
+                        className="w-full text-xs outline-none text-gray-700 placeholder-gray-400 bg-transparent"
+                        value={categorySearch}
+                        onChange={(e) => setCategorySearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Lista de Opções */}
+                  <div className="max-h-56 overflow-y-auto custom-scrollbar">
+                    {filteredCategoriesForDropdown.length > 0 ? (
+                      filteredCategoriesForDropdown.map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => handleSelectCategory(cat)}
+                          className={`w-full text-left px-4 py-2 text-xs hover:bg-cyan-50 transition flex items-center justify-between ${selectedCategory?.id === cat.id ? 'bg-cyan-50 text-cyan-700 font-bold' : 'text-gray-600'}`}
+                        >
+                          {cat.name}
+                          {selectedCategory?.id === cat.id && <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-6 text-xs text-gray-400 text-center">
+                        Nenhuma categoria encontrada.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* === FIM DO FILTRO === */}
+
           </div>
+
+          {/* Tabela de Dados */}
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-sm text-gray-500 border-b border-gray-100 bg-gray-50/50">
-                  <th className="px-6 py-3 font-medium">Nome</th>
-                  <th className="px-6 py-3 font-medium hidden sm:table-cell">
-                    Data
-                  </th>
-                  <th className="px-6 py-3 font-medium hidden sm:table-cell">
-                    Tamanho
-                  </th>
-                  <th className="px-6 py-3 font-medium text-right">Ação</th>
+                <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50/50 uppercase tracking-wider">
+                  <th className="px-6 py-3 font-semibold">Nome do Arquivo</th>
+                  <th className="px-6 py-3 font-semibold hidden sm:table-cell">Categoria</th>
+                  <th className="px-6 py-3 font-semibold hidden sm:table-cell">Data</th>
+                  <th className="px-6 py-3 font-semibold hidden sm:table-cell">Tamanho</th>
+                  <th className="px-6 py-3 font-semibold text-right">Ação</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-50">
                 {isLoadingDocs ? (
                   <tr>
-                    <td
-                      colSpan="4"
-                      className="px-6 py-8 text-center text-gray-400"
-                    >
+                    <td colSpan="5" className="px-6 py-10 text-center text-gray-400 animate-pulse">
                       Carregando documentos...
                     </td>
                   </tr>
                 ) : documents.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan="4"
-                      className="px-6 py-8 text-center text-gray-400"
-                    >
-                      Nenhum documento encontrado.
+                    <td colSpan="5" className="px-6 py-12 text-center flex flex-col items-center justify-center text-gray-400">
+                      <FiFileText size={32} className="mb-2 opacity-30" />
+                      <p>Nenhum documento encontrado.</p>
+                      {selectedCategory && <p className="text-xs mt-1 text-red-400">Tente limpar o filtro.</p>}
                     </td>
                   </tr>
                 ) : (
                   documents.map((doc) => (
-                    <tr
-                      key={doc.id}
-                      className="hover:bg-gray-50 border-b border-gray-100 last:border-0 transition"
-                    >
+                    <tr key={doc.id} className="hover:bg-gray-50 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <FiFileText className="w-5 h-5 text-gray-400" />
-                          <span className="font-medium text-gray-700">
-                            {doc.fileName || doc.name}
-                          </span>
+                          <div className="bg-gray-100 p-2 rounded text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition">
+                             <FiFileText size={16} />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-700 text-sm">{doc.fileName || doc.name}</span>
+                            <span className="text-[10px] text-gray-400 sm:hidden">{formatDate(doc.uploadDate || doc.createdAt)}</span>
+                          </div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 hidden sm:table-cell">
+                         {/* Badge de Categoria */}
+                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                           {doc.categoryName || "Geral"}
+                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">
                         {formatDate(doc.uploadDate || doc.createdAt)}
@@ -320,8 +415,11 @@ export default function Dashboard() {
                         {formatBytes(doc.fileSize || doc.size)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="p-2 text-cyan-500 hover:bg-cyan-50 rounded-full transition cursor-pointer">
-                          <FiDownload size={18} />
+                        <button 
+                          className="p-2 text-cyan-500 hover:bg-cyan-50 rounded-full transition shadow-sm border border-transparent hover:border-cyan-100"
+                          title="Baixar Documento"
+                        >
+                          <FiDownload size={16} />
                         </button>
                       </td>
                     </tr>
@@ -330,6 +428,13 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+          
+          {/* Rodapé da Tabela (Contador simples) */}
+          {!isLoadingDocs && documents.length > 0 && (
+             <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-400 text-right">
+                Mostrando {documents.length} registros
+             </div>
+          )}
         </div>
       </main>
     </div>
