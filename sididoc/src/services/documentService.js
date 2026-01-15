@@ -26,7 +26,7 @@ export async function uploadDocument(formData) {
   return response.data;
 }
 
-// Busca Paginada por Setor
+// Busca Paginada por Setor (Sem filtro de categoria)
 export const getDocumentsBySector = async (page = 0, size = 10) => {
   const response = await api.get(`/documents/find-by-sector`, {
     params: {
@@ -38,65 +38,75 @@ export const getDocumentsBySector = async (page = 0, size = 10) => {
   return response.data;
 };
 
-// === FUNÇÕES DE FILTRO E CATEGORIA (Atualizadas) ===
+// === NOVAS FUNÇÕES (Adicionadas para o Filtro) ===
 
-// 1. Filtra por Setor E Categoria
+// 1. Filtra por Setor E Categoria (Chama seu endpoint @GetMapping("/filter"))
 export const filterDocuments = async (sectorId, categoryId) => {
   const response = await api.get(`/documents/filter`, {
     params: {
-      sectorId: sectorId,
-      categoryId: categoryId
+      sectorId: sectorId,     // Obrigatório no seu endpoint
+      categoryId: categoryId  // Obrigatório no seu endpoint
     }
   });
-  // Seu endpoint de filtro retorna List<DTO> direto (sem paginação)
+  // Seu endpoint retorna List<DTO> direto, então retornamos data direto
   return response.data; 
 };
 
-export async function downloadDocument(id, fileName) {
+// 2. Busca Categorias (Mock ou Endpoint Real)
+export const getCategoriesBySector = async () => {
+  // Se você tiver um endpoint real, descomente a linha abaixo:
+  // const response = await api.get('/categories/find-all'); return response.data;
+  
+  // Por enquanto, retornamos dados falsos para testar o visual:
+  return [
+    { id: 1, name: "Contratos" },
+    { id: 2, name: "Licitações" },
+    { id: 3, name: "Financeiro" },
+    { id: 4, name: "RH" },
+    { id: 5, name: "Ofícios" }
+  ];
+};
+
+export const downloadDocumentById = async (documentId, fallbackName) => {
   try {
-    const response = await api.get('/documents/download', {
-      params: { id: id }, // Envia o ID como parâmetro de query
-      responseType: 'blob' // CRUCIAL: Diz ao axios que é um arquivo binário
+    const response = await api.get(`/documents/download`, {
+      params: { id: documentId },
+      responseType: 'blob',
     });
 
-    // Cria um objeto URL temporário para o blob recebido
+    let fileName = fallbackName;
+
+    const disposition = response.headers['content-disposition'];
+
+    if (disposition && disposition.indexOf('attachment') !== -1) {
+      const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+      const matches = filenameRegex.exec(disposition);
+      if (matches != null && matches[1]) {
+        fileName = matches[1].replace(/['"]/g, '');
+      }
+    }
+
+    if (!fileName.includes(".")) {
+      const type = response.headers['content-type'];
+      if (type === 'application/pdf') fileName += ".pdf";
+      else if (type === 'image/jpeg') fileName += ".jpg";
+      else if (type === 'image/png') fileName += ".png";
+    }
+
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    
-    // Define o nome do arquivo para salvar
-    link.setAttribute('download', fileName || 'documento.pdf'); 
-    
-    // Simula o clique e remove o link
+
+    link.setAttribute('download', fileName);
+
     document.body.appendChild(link);
     link.click();
+
     link.parentNode.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
-    return true;
-  } catch (error) {
-    console.error("Erro no download:", error);
-    throw error;
-  }
-}
 
-// 2. Busca Categorias Ativas (AGORA CONECTADO AO BACKEND)
-export const getCategoriesBySector = async () => {
-  try {
-    // ATENÇÃO: Verifique se o nome do seu Controller no Java é 'document-categories' ou 'categories'
-    // Adicionei size=100 para garantir que traga todas no dropdown
-    const response = await api.get('/documents-categories/find-all?page=0&size=100&sort=name,asc');
-    
-    // O endpoint Java retorna um Page<DTO>
-    // A lista real fica dentro de .content
-    if (response.data && response.data.content) {
-        return response.data.content;
-    }
-    
-    // Fallback caso mude para lista direta no futuro
-    return response.data || [];
   } catch (error) {
-    console.error("Erro ao buscar categorias:", error);
-    return []; // Retorna lista vazia para não quebrar o front
+    console.error("Erro ao baixar documento:", error);
+    throw error;
   }
 };
