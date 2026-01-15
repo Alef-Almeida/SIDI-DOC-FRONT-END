@@ -5,7 +5,9 @@ import { useState, useEffect } from 'react';
 import Login from './pages/Login/Login';
 import Home from './pages/Home/Home';
 import Upload from './pages/Upload/Upload';
-import SuperAdminDashboard from './pages/Admin/SuperAdminDashboard'; // Importe a nova tela
+import SuperAdminDashboard from './pages/Admin/SuperAdminDashboard';
+import ActivateAccount from './pages/Login/ActivateAccount';
+import ResetPassword from './pages/Login/ResetPassword';
 
 // Serviço para checar role
 import { getMe } from './services/authService';
@@ -46,6 +48,11 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
+        {/* Rota para o link de reset de senha */}
+        <Route path="/redefinir-senha" element={<ResetPassword />} />
+
+        {/* Rota para Ativação de Conta (Link de boas-vindas do email) */}
+        <Route path="/ativar-conta" element={<ActivateAccount />} />  
         
         {/* Rotas de Usuário Comum */}
         <Route path="/home" element={<Home />} />

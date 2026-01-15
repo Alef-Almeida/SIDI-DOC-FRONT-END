@@ -1,11 +1,11 @@
 import api from './api';
 
-// Função para buscar todos os documentos (Já existia)
+// === FUNÇÕES EXISTENTES (Mantidas) ===
+
+// Busca geral (Admin ou Debug)
 export async function getAllDocuments(page = 0, size = 10) {
   try {
     const response = await api.get(`/documents/find-all?page=${page}&size=${size}&sort=uploadDate,desc`);
-    
-    // Se for um Page do Spring, retorna o content
     if (response.data && response.data.content) {
       return response.data.content;
     }
@@ -16,9 +16,8 @@ export async function getAllDocuments(page = 0, size = 10) {
   }
 }
 
-// === ESSA É A FUNÇÃO QUE ESTAVA FALTANDO ===
+// Upload de Documentos
 export async function uploadDocument(formData) {
-  // O axios gerencia o boundary do multipart automaticamente
   const response = await api.post('/documents/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -27,14 +26,43 @@ export async function uploadDocument(formData) {
   return response.data;
 }
 
+// Busca Paginada por Setor (Sem filtro de categoria)
 export const getDocumentsBySector = async (page = 0, size = 10) => {
-  // Não precisamos passar o sectorId, o Back-end pega do Token!
   const response = await api.get(`/documents/find-by-sector`, {
     params: {
       page,
       size,
-      sort: 'createdAt,desc' // Garante a ordenação que o Java pede
+      sort: 'createdAt,desc'
     }
   });
   return response.data;
+};
+
+// === NOVAS FUNÇÕES (Adicionadas para o Filtro) ===
+
+// 1. Filtra por Setor E Categoria (Chama seu endpoint @GetMapping("/filter"))
+export const filterDocuments = async (sectorId, categoryId) => {
+  const response = await api.get(`/documents/filter`, {
+    params: {
+      sectorId: sectorId,     // Obrigatório no seu endpoint
+      categoryId: categoryId  // Obrigatório no seu endpoint
+    }
+  });
+  // Seu endpoint retorna List<DTO> direto, então retornamos data direto
+  return response.data; 
+};
+
+// 2. Busca Categorias (Mock ou Endpoint Real)
+export const getCategoriesBySector = async () => {
+  // Se você tiver um endpoint real, descomente a linha abaixo:
+  // const response = await api.get('/categories/find-all'); return response.data;
+  
+  // Por enquanto, retornamos dados falsos para testar o visual:
+  return [
+    { id: 1, name: "Contratos" },
+    { id: 2, name: "Licitações" },
+    { id: 3, name: "Financeiro" },
+    { id: 4, name: "RH" },
+    { id: 5, name: "Ofícios" }
+  ];
 };
