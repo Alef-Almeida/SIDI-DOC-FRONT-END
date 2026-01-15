@@ -185,19 +185,30 @@ export default function Dashboard() {
     setIsDownloadingZip(true);
     try {
       const ids = documents.map(d => d.id);
+      const sectorPart = selectedSector
+          ? selectedSector.name
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos (opcional, mas recomendado)
+              .trim()
+              .replace(/\s+/g, '_')
+              .toLowerCase()
+          : "setor";
 
-      let suffix = "geral";
+      const categoryPart = selectedCategory
+          ? selectedCategory.name
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+              .trim()
+              .replace(/\s+/g, '_')
+              .toLowerCase()
+          : "";
 
-      if (selectedCategory) {
-        suffix = selectedCategory.name.trim().replace(/\s+/g, '_').toLowerCase();
-      }
+      const zipName = `documentos_recentes_${sectorPart}_${categoryPart}.zip`;
 
-      const zipName = `documentos_recentes_${suffix}.zip`;
+      console.log("Baixando ZIP como:", zipName);
 
       await downloadZip(ids, zipName);
 
-      // eslint-disable-next-line no-unused-vars
     } catch (error) {
+      console.error(error);
       alert("Erro ao gerar o arquivo ZIP.");
     } finally {
       setIsDownloadingZip(false);
