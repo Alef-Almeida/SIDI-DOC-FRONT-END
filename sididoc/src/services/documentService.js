@@ -52,19 +52,22 @@ export const filterDocuments = async (sectorId, categoryId) => {
   return response.data; 
 };
 
-// 2. Busca Categorias (Mock ou Endpoint Real)
 export const getCategoriesBySector = async () => {
-  // Se você tiver um endpoint real, descomente a linha abaixo:
-  // const response = await api.get('/categories/find-all'); return response.data;
-  
-  // Por enquanto, retornamos dados falsos para testar o visual:
-  return [
-    { id: 1, name: "Contratos" },
-    { id: 2, name: "Licitações" },
-    { id: 3, name: "Financeiro" },
-    { id: 4, name: "RH" },
-    { id: 5, name: "Ofícios" }
-  ];
+  try {
+    const response = await api.get('/documents-categories/find-all', {
+      params: {
+        page: 0,
+        size: 100,
+        sort: 'name,asc'
+      }
+    });
+
+    return response.data.content || [];
+
+  } catch (error) {
+    console.error("Erro ao buscar categorias:", error);
+    return [];
+  }
 };
 
 export const downloadDocumentById = async (documentId, fallbackName) => {

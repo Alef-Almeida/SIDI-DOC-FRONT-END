@@ -10,7 +10,8 @@ import {
   FiFilter,
   FiDownload,
   FiX,
-  FiPackage
+  FiPackage,
+  FiExternalLink // FiEye removido pois não é mais usado na tabela
 } from "react-icons/fi";
 
 import { getMe, getMySectors, switchSector } from "../../services/authService";
@@ -43,22 +44,36 @@ export default function Dashboard() {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
 
+  // Estado do Modal
+  const [viewingDoc, setViewingDoc] = useState(null);
+
   const sectorDropdownRef = useRef(null);
   const categoryDropdownRef = useRef(null);
 
+  // === FORMATADORES ===
   const formatBytes = (bytes, decimals = 2) => {
-    if (!bytes) return "0 Bytes";
+    if (!bytes && bytes !== 0) return "0 Bytes";
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " + sizes[i];
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("pt-BR");
+  const formatDate = (dateInput) => {
+    if (!dateInput) return "-";
+    let date;
+    if (Array.isArray(dateInput)) {
+      date = new Date(dateInput[0], dateInput[1] - 1, dateInput[2], dateInput[3] || 0, dateInput[4] || 0);
+    } else {
+      date = new Date(dateInput);
+    }
+    if (isNaN(date.getTime())) return "Data Inválida";
+    const dia = date.toLocaleDateString('pt-BR');
+    const hora = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `${dia} às ${hora}`;
   };
 
+  // === BUSCAS ===
   const fetchDocuments = async (catId = null) => {
     setIsLoadingDocs(true);
     try {
@@ -119,7 +134,7 @@ export default function Dashboard() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-
+  // === HANDLERS ===
   const handleSelectSector = async (sec) => {
     setIsSectorOpen(false);
     try {
@@ -160,12 +175,24 @@ export default function Dashboard() {
 
   const handleDownload = async (doc) => {
     try {
-      const fileName = doc.fileName || doc.name || "documento_sem_nome";
+      const fileName = doc.title || "documento";
       await downloadDocumentById(doc.id, fileName);
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
-      alert("Erro ao iniciar o download. Tente novamente.");
+      alert("Erro ao iniciar o download.");
     }
+  };
+
+  const handleViewDocument = (doc) => {
+    if (doc.downloadUrl) {
+      setViewingDoc(doc);
+    } else {
+      alert("Este documento não possui visualização disponível.");
+    }
+  };
+
+  const handleCloseModal = () => {
+    setViewingDoc(null);
   };
 
   const handleDownloadAll = async () => {
@@ -174,22 +201,18 @@ export default function Dashboard() {
     setIsDownloadingZip(true);
     try {
       const ids = documents.map(d => d.id);
-
-      // Função de limpeza
       const clean = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, '_').toLowerCase();
 
       const secName = selectedSector ? selectedSector.name : "setor";
       const catName = selectedCategory ? selectedCategory.name : "";
 
       let zipName = "";
-
       if (selectedCategory) {
         zipName = `${clean(catName)}_setor_${clean(secName)}.zip`;
       } else {
         zipName = `documentos_setor_${clean(secName)}.zip`;
       }
 
-      console.log("Baixando ZIP (Home):", zipName);
       await downloadZip(ids, zipName);
 
     } catch (error) {
@@ -286,6 +309,8 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+
+            {/* === TABELA ATUALIZADA === */}
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -307,15 +332,32 @@ export default function Dashboard() {
                         <tr key={doc.id} className="hover:bg-gray-50 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="bg-gray-100 p-2 rounded text-gray-500 group-hover:bg-cyan-50 group-hover:text-cyan-600 transition"><FiFileText size={16} /></div>
-                              <div className="flex flex-col"><span className="font-medium text-gray-700 text-sm">{doc.fileName || doc.name}</span><span className="text-[10px] text-gray-400 sm:hidden">{formatDate(doc.uploadDate || doc.createdAt)}</span></div>
+                              {/* === ÍCONE AGORA É UM BOTÃO CLICKÁVEL PARA VISUALIZAR === */}
+                              <button
+                                  onClick={() => handleViewDocument(doc)}
+                                  className="bg-gray-100 p-2 rounded text-gray-500 hover:bg-cyan-100 hover:text-cyan-600 transition cursor-pointer"
+                                  title="Clique para visualizar o documento"
+                              >
+                                <FiFileText size={16} />
+                              </button>
+
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-700 text-sm" title={doc.title}>{doc.title || "Sem Título"}</span>
+                                <span className="text-[10px] text-gray-400 sm:hidden">{formatDate(doc.uploadDate)}</span>
+                              </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">{doc.categoryName || "Geral"}</span></td>
-                          <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">{formatDate(doc.uploadDate || doc.createdAt)}</td>
-                          <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">{formatBytes(doc.fileSize || doc.size)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">{formatDate(doc.uploadDate)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">{formatBytes(doc.sizeBytes)}</td>
+
+                          {/* === AÇÃO APENAS DOWNLOAD (OLHO REMOVIDO) === */}
                           <td className="px-6 py-4 text-right">
-                            <button onClick={() => handleDownload(doc)} className="p-2 text-cyan-500 hover:bg-cyan-50 rounded-full transition shadow-sm border border-transparent hover:border-cyan-100 cursor-pointer" title="Baixar Documento"><FiDownload size={16} /></button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => handleDownload(doc)} className="p-2 text-cyan-500 hover:bg-cyan-50 rounded-full transition cursor-pointer" title="Baixar">
+                                <FiDownload size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                     ))
@@ -326,6 +368,32 @@ export default function Dashboard() {
             {!isLoadingDocs && documents.length > 0 && <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-400 text-right">Mostrando {documents.length} registros</div>}
           </div>
         </main>
+
+        {/* === MODAL DE VISUALIZAÇÃO === */}
+        {viewingDoc && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
+              <div className="bg-white w-full h-[90vh] max-w-5xl rounded-xl flex flex-col shadow-2xl overflow-hidden animate-scaleIn">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-cyan-100 flex items-center justify-center text-cyan-600">
+                      <FiFileText />
+                    </div>
+                    <div className="min-w-0 max-w-[60%]">
+                      <h3 className="font-bold text-gray-800 text-sm md:text-base truncate">{viewingDoc.title}</h3>
+                      <p className="text-xs text-gray-500">Modo de visualização</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a href={viewingDoc.downloadUrl} target="_blank" rel="noreferrer" className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition" title="Abrir em nova aba"><FiExternalLink size={20} /></a>
+                    <button onClick={handleCloseModal} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"><FiX size={24} /></button>
+                  </div>
+                </div>
+                <div className="flex-1 bg-gray-100 relative">
+                  <iframe src={viewingDoc.downloadUrl} title="Document Viewer" className="w-full h-full" frameBorder="0" />
+                </div>
+              </div>
+            </div>
+        )}
       </div>
   );
 }

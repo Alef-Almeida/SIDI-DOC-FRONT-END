@@ -8,7 +8,9 @@ import {
     FiEye,
     FiFilter,
     FiPackage,
-    FiAlertCircle
+    FiAlertCircle,
+    FiX,
+    FiExternalLink
 } from 'react-icons/fi';
 
 import { getMySectors } from '../../services/authService';
@@ -33,6 +35,9 @@ export default function Consult() {
     // Loading
     const [isLoading, setIsLoading] = useState(false);
     const [isZipLoading, setIsZipLoading] = useState(false);
+
+    // Estado para o Modal de Visualização
+    const [viewingDoc, setViewingDoc] = useState(null);
 
     // === 1. CARREGA DADOS INICIAIS ===
     useEffect(() => {
@@ -82,9 +87,10 @@ export default function Consult() {
         }
     };
 
+    // === DOWNLOADS ===
     const handleDownloadOne = async (doc) => {
         try {
-            const name = doc.fileName || doc.title || "documento";
+            const name = doc.title || "documento";
             await downloadDocumentById(doc.id, name);
             // eslint-disable-next-line no-unused-vars
         } catch (error) {
@@ -98,7 +104,6 @@ export default function Consult() {
         setIsZipLoading(true);
         try {
             const ids = documents.map(d => d.id);
-
             const clean = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, '_').toLowerCase();
 
             const secObj = sectors.find(s => s.id == selectedSector);
@@ -115,9 +120,7 @@ export default function Consult() {
                 zipName = `documentos_setor_${clean(secName)}.zip`;
             }
 
-            console.log("Baixando ZIP (Consulta):", zipName);
             await downloadZip(ids, zipName);
-
             // eslint-disable-next-line no-unused-vars
         } catch (error) {
             alert("Erro ao gerar ZIP.");
@@ -126,15 +129,40 @@ export default function Consult() {
         }
     };
 
+    // === VISUALIZAÇÃO (SIMPLIFICADA) ===
+    const handleViewDocument = (doc) => {
+        // Como o JSON retorna 'downloadUrl' preenchido, usamos ele direto.
+        if (doc.downloadUrl) {
+            setViewingDoc(doc);
+        } else {
+            alert("Este documento não possui link de visualização disponível.");
+        }
+    };
+
+    const handleCloseModal = () => {
+        setViewingDoc(null);
+    };
+
+    // === HELPERS DE FORMATAÇÃO ===
     const formatDate = (dateInput) => {
         if (!dateInput) return "-";
         let date;
+
+        // O Backend manda array: [2026, 1, 15, 9, 22, 46, 462617000]
         if (Array.isArray(dateInput)) {
-            date = new Date(dateInput[0], dateInput[1] - 1, dateInput[2], dateInput[3] || 0, dateInput[4] || 0);
+            date = new Date(
+                dateInput[0],      // Ano
+                dateInput[1] - 1,  // Mês (0-11)
+                dateInput[2],      // Dia
+                dateInput[3] || 0, // Hora
+                dateInput[4] || 0  // Minuto
+            );
         } else {
             date = new Date(dateInput);
         }
+
         if (isNaN(date.getTime())) return "Data Inválida";
+
         const dia = date.toLocaleDateString('pt-BR');
         const hora = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         return `${dia} às ${hora}`;
@@ -148,6 +176,7 @@ export default function Consult() {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-10">
+            {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -163,6 +192,7 @@ export default function Consult() {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 py-8">
+                {/* Filtros */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6">
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="relative flex-1">
@@ -188,6 +218,7 @@ export default function Consult() {
                     </div>
                 </div>
 
+                {/* Barra de Status e Download All */}
                 <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <p className="text-sm font-semibold text-gray-600">{isLoading ? "Carregando..." : `${documents.length} documentos encontrados`}</p>
                     {documents.length > 0 && (
@@ -198,6 +229,7 @@ export default function Consult() {
                     )}
                 </div>
 
+                {/* Lista de Documentos */}
                 {isLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">{[1, 2, 3, 4].map(i => <div key={i} className="h-56 bg-gray-200 rounded-xl"></div>)}</div>
                 ) : documents.length === 0 ? (
@@ -212,9 +244,14 @@ export default function Consult() {
                             <div key={doc.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-start gap-4 mb-4">
-                                        <div className="w-12 h-12 rounded-lg bg-cyan-50 flex items-center justify-center text-cyan-500 shrink-0 border border-cyan-100"><FiFileText size={22} /></div>
+                                        <div className="w-12 h-12 rounded-lg bg-cyan-50 flex items-center justify-center text-cyan-500 shrink-0 border border-cyan-100">
+                                            <FiFileText size={22} />
+                                        </div>
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="font-bold text-gray-800 text-base truncate" title={doc.title}>{doc.title || "Sem Título"}</h3>
+                                            {/* Uso correto das chaves do JSON */}
+                                            <h3 className="font-bold text-gray-800 text-base truncate" title={doc.title}>
+                                                {doc.title || "Sem Título"}
+                                            </h3>
                                             <div className="mt-2 space-y-1">
                                                 <p className="text-xs text-gray-500"><span className="font-medium text-gray-400">Tipo:</span> {doc.categoryName || "Geral"}</p>
                                                 <p className="text-xs text-gray-500"><span className="font-medium text-gray-400">Data:</span> {formatDate(doc.uploadDate)}</p>
@@ -224,14 +261,74 @@ export default function Consult() {
                                     </div>
                                 </div>
                                 <div className="flex gap-3 pt-4 border-t border-gray-100 mt-2">
-                                    <button className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-50 hover:text-gray-800 transition"><FiEye size={14} /> Visualizar</button>
-                                    <button onClick={() => handleDownloadOne(doc)} className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-cyan-500 text-white text-xs font-medium hover:bg-cyan-600 shadow-sm transition active:scale-95"><FiDownload size={14} /> Baixar</button>
+                                    <button
+                                        onClick={() => handleViewDocument(doc)}
+                                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-50 hover:text-gray-800 transition"
+                                    >
+                                        <FiEye size={14} /> Visualizar
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleDownloadOne(doc)}
+                                        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-cyan-500 text-white text-xs font-medium hover:bg-cyan-600 shadow-sm transition active:scale-95"
+                                    >
+                                        <FiDownload size={14} /> Baixar
+                                    </button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
             </main>
+
+            {/* === MODAL DE VISUALIZAÇÃO === */}
+            {viewingDoc && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white w-full h-[90vh] max-w-5xl rounded-xl flex flex-col shadow-2xl overflow-hidden animate-scaleIn">
+
+                        {/* Header do Modal */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded bg-cyan-100 flex items-center justify-center text-cyan-600">
+                                    <FiFileText />
+                                </div>
+                                <div className="min-w-0 max-w-[60%]">
+                                    <h3 className="font-bold text-gray-800 text-sm md:text-base truncate">{viewingDoc.title}</h3>
+                                    <p className="text-xs text-gray-500">Modo de visualização</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {/* Botão para abrir em nova aba (fallback útil) */}
+                                <a
+                                    href={viewingDoc.downloadUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition"
+                                    title="Abrir em nova aba"
+                                >
+                                    <FiExternalLink size={20} />
+                                </a>
+                                <button
+                                    onClick={handleCloseModal}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                                >
+                                    <FiX size={24} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Viewer Iframe */}
+                        <div className="flex-1 bg-gray-100 relative">
+                            <iframe
+                                src={viewingDoc.downloadUrl}
+                                title="Document Viewer"
+                                className="w-full h-full"
+                                frameBorder="0"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
