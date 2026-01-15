@@ -4,9 +4,6 @@ import {
   FiUsers,
   FiLayers,
   FiTag,
-  FiPlus,
-  FiTrash2,
-  FiUserPlus,
 } from "react-icons/fi";
 
 import {
@@ -193,7 +190,9 @@ export default function SuperAdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans flex flex-col md:flex-row">
+    <div className="min-h-screen bg-gray-50 font-sans flex flex-col md:flex-row overflow-hidden">
+      
+      {/* Sidebar: Fixa no rodapé (mobile) ou na lateral (desktop) */}
       <Sidebar
         menuItems={MENU_ITEMS}
         activeTab={activeTab}
@@ -201,10 +200,13 @@ export default function SuperAdminDashboard() {
         onLogout={handleLogout}
       />
 
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto h-screen">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      {/* Main Content: Padding-bottom extra no mobile (pb-24) para a sidebar não cobrir conteúdo */}
+      <main className="flex-1 p-4 md:p-10 pb-24 md:pb-10 overflow-y-auto h-screen scroll-smooth">
+        
+        {/* Header da Página */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 leading-tight">
               {activeTab === "users"
                 ? "Gestão de Usuários"
                 : activeTab === "sectors"
@@ -212,33 +214,38 @@ export default function SuperAdminDashboard() {
                 : "Gestão de Categorias"}
             </h2>
             <p className="text-gray-500 text-sm mt-1">
-              Registros: {currentListFull.length}
+              Registros encontrados: {currentListFull.length}
             </p>
           </div>
-          <SearchInput
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          
+          <div className="w-full md:w-auto">
+            <SearchInput
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
         {message.text && (
-          <div className="mb-6">
+          <div className="mb-6 animate-fadeIn">
             <Alert type={message.type} message={message.text} />
           </div>
         )}
 
-        {/* ABA USUÁRIOS */}
+        {/* === ABA USUÁRIOS === */}
         {activeTab === "users" && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-sm font-bold text-gray-500 uppercase mb-4">
+            <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
+              <h3 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wide">
                 Novo Usuário
               </h3>
+              
+              {/* Form Grid Responsivo */}
               <form
                 onSubmit={handleRegisterUser}
-                className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end"
               >
-                <div className="md:col-span-1">
+                <div className="sm:col-span-1 lg:col-span-1">
                   <Input
                     label="Nome"
                     value={newUser.name}
@@ -248,7 +255,7 @@ export default function SuperAdminDashboard() {
                     required
                   />
                 </div>
-                <div className="md:col-span-1">
+                <div className="sm:col-span-1 lg:col-span-1">
                   <Input
                     label="Email"
                     type="email"
@@ -259,7 +266,7 @@ export default function SuperAdminDashboard() {
                     required
                   />
                 </div>
-                <div className="md:col-span-1">
+                <div className="sm:col-span-1 lg:col-span-1">
                   <Select
                     label="Permissão"
                     value={newUser.role}
@@ -272,7 +279,7 @@ export default function SuperAdminDashboard() {
                     <option value="SUPER_ADMIN">Super Admin</option>
                   </Select>
                 </div>
-                <div className="md:col-span-1">
+                <div className="sm:col-span-1 lg:col-span-1">
                   <Select
                     label="Setor (Opcional)"
                     value={selectedSectorId}
@@ -286,20 +293,19 @@ export default function SuperAdminDashboard() {
                     ))}
                   </Select>
                 </div>
-                <div className="md:col-span-1">
-                  <Button type="submit">+ Cadastrar</Button>
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <Button type="submit" className="w-full">+ Cadastrar</Button>
                 </div>
               </form>
             </div>
 
             <TableContainer>
-              {/* 1. Adicionado o cabeçalho 'Status' */}
               <TableHeader
                 headers={[
                   { label: "Nome" },
                   { label: "Email" },
                   { label: "Permissão" },
-                  { label: "Status", className: "text-center" }, // <--- NOVA COLUNA
+                  { label: "Status", className: "text-center" },
                 ]}
               />
 
@@ -312,17 +318,15 @@ export default function SuperAdminDashboard() {
                     <td className="p-4 font-medium text-gray-800">{u.name}</td>
                     <td className="p-4 text-gray-600">{u.email}</td>
                     <td className="p-4">
-                      <span className="bg-cyan-50 text-cyan-700 px-2 py-1 rounded text-xs font-bold">
+                      <span className="bg-cyan-50 text-cyan-700 px-2 py-1 rounded text-xs font-bold whitespace-nowrap">
                         {u.role}
                       </span>
                     </td>
-
-                    {/* 2. Lógica do Status (Pendente vs Ativo) */}
                     <td className="p-4 text-center">
                       {u.enabled ? (
                         <span
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"
-                          title="Aguardando ativação por e-mail"
+                          title="Aguardando ativação"
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                           Pendente
@@ -341,18 +345,17 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        {/* ABA SETORES */}
+        {/* === ABA SETORES === */}
         {activeTab === "sectors" && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-sm font-bold text-gray-500 uppercase mb-4">
+            <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
+              <h3 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wide">
                 Novo Setor
               </h3>
 
-              {/* GRID DE 4 COLUNAS EM LINHA ÚNICA */}
               <form
                 onSubmit={handleCreateSector}
-                className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end"
               >
                 <Input
                   label="Nome"
@@ -370,22 +373,24 @@ export default function SuperAdminDashboard() {
                   }
                   required
                 />
-                <Input
-                  label="Descrição"
-                  value={newSector.description}
-                  onChange={(e) =>
-                    setNewSector({ ...newSector, description: e.target.value })
-                  }
-                />
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <Input
+                    label="Descrição"
+                    value={newSector.description}
+                    onChange={(e) =>
+                      setNewSector({ ...newSector, description: e.target.value })
+                    }
+                  />
+                </div>
 
-                <div className="w-full">
-                  <Button type="submit">+ Criar Setor</Button>
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <Button type="submit" className="w-full">+ Criar Setor</Button>
                 </div>
               </form>
             </div>
 
-            {/* Lista de Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Grid de Cards Responsivo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {paginatedList.map((sector) => (
                 <SectorCard
                   key={sector.id}
@@ -399,16 +404,16 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        {/* ABA CATEGORIAS */}
+        {/* === ABA CATEGORIAS === */}
         {activeTab === "categories" && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-sm font-bold text-gray-500 uppercase mb-4">
+            <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
+              <h3 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wide">
                 Nova Categoria
               </h3>
               <form
                 onSubmit={handleCreateCategory}
-                className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end"
               >
                 <Input
                   label="Nome"
@@ -428,9 +433,12 @@ export default function SuperAdminDashboard() {
                     })
                   }
                 />
-                <Button type="submit">+ Salvar</Button>
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <Button type="submit" className="w-full">+ Salvar</Button>
+                </div>
               </form>
             </div>
+            
             <TableContainer>
               <TableHeader
                 headers={[
@@ -457,10 +465,10 @@ export default function SuperAdminDashboard() {
                     <td className="p-4 text-right">
                       <button
                         onClick={() => handleDisableCategory(cat.name)}
-                        className={`text-xs px-3 py-1 rounded-full border font-bold ${
+                        className={`text-xs px-3 py-1 rounded-full border font-bold transition active:scale-95 ${
                           cat.enabled === false
-                            ? "text-gray-400"
-                            : "text-red-600 border-red-200"
+                            ? "text-gray-400 bg-gray-50"
+                            : "text-red-600 border-red-200 bg-red-50"
                         }`}
                       >
                         {cat.enabled === false ? "Reativar" : "Desabilitar"}

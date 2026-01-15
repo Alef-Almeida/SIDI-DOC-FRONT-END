@@ -4,14 +4,13 @@ import {
   FiUploadCloud,
   FiLayers,
   FiTag,
-  FiFileText,
   FiCheckCircle,
 } from "react-icons/fi";
 
 // Serviços
 import { getAllCategories } from "../../services/adminService";
 import { getMySectors } from "../../services/authService";
-import { uploadDocument } from "../../services/documentService"; // <--- Importe o serviço real
+import { uploadDocument } from "../../services/documentService"; 
 
 // Componentes
 import { PageHeader } from "../../components/PageHeader";
@@ -109,7 +108,6 @@ export default function Upload() {
     // 1. Validações
     if (!currentSector) newErrors.push("Erro: Setor não identificado.");
     
-    // Verifica se tem ID e se não é a string "Selecione..." ou vazio
     if (!selectedCategoryId || selectedCategoryId === "") {
         newErrors.push("Selecione uma categoria.");
     }
@@ -129,21 +127,17 @@ export default function Upload() {
       const formData = new FormData();
       formData.append("file", selectedFiles[0].file);
       
-      // === A MÁGICA ACONTECE AQUI ===
-      // 1. Garante que é tratado como número no JS (ex: remove espaços, valida)
       const idNumerico = Number(selectedCategoryId);
       
       if (isNaN(idNumerico)) {
          throw new Error(`ID da categoria inválido: ${selectedCategoryId}`);
       }
 
-      // 2. O FormData exige String, mas tem que ser a String de um número (ex: "5")
-      // Se mandar "Memorando", o Java explode. Se mandar "5", o Java converte para Long 5.
       formData.append("categoryId", String(idNumerico)); 
 
       console.log("Enviando para o Back:", { 
         file: selectedFiles[0].file.name,
-        categoryIdEnviado: String(idNumerico) // Deve aparecer um número entre aspas, ex: "1"
+        categoryIdEnviado: String(idNumerico) 
       });
       
       // Chamada API
@@ -164,31 +158,33 @@ export default function Upload() {
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900 px-6 md:px-20 py-8 pb-20">
+    <div className="min-h-screen bg-white font-sans text-gray-900 px-4 py-6 md:px-10 md:py-8 pb-24 md:pb-10 max-w-5xl mx-auto">
       <PageHeader
         title="Upload de Documentos"
         subtitle="Preencha os dados abaixo para digitalizar e arquivar o documento."
       />
 
       {isLoadingData ? (
-        <div className="py-10 text-gray-500 text-center animate-pulse">
+        <div className="py-10 text-gray-500 text-center animate-pulse flex flex-col items-center">
+          <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-2"></div>
           Carregando informações...
         </div>
       ) : (
         <>
-          {/* Formulários */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mb-8">
-            {/* 1. Setor Read-Only (Apenas informativo) */}
-            <div className="flex flex-col">
+          {/* Formulários: Stack no mobile, Grid 2 colunas no desktop */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+            
+            {/* 1. Setor Read-Only */}
+            <div className="flex flex-col w-full">
               <label className="text-gray-700 font-bold mb-1.5 text-xs uppercase tracking-wide flex items-center gap-1.5">
-                <FiLayers className="text-[#00bdd6]" size={16} />
+                <FiLayers className="text-[#00bdd6] w-4 h-4" />
                 Setor de Destino
               </label>
-              <div className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-700 font-medium cursor-not-allowed flex items-center justify-between">
+              <div className="w-full h-12 md:h-11 px-4 rounded-lg border border-gray-200 bg-gray-50 text-base md:text-sm text-gray-700 font-medium cursor-not-allowed flex items-center justify-between">
                 <span className="truncate">
                   {currentSector ? currentSector.name : "Nenhum"}
                 </span>
-                <FiCheckCircle className="text-gray-400 shrink-0" size={18} />
+                <FiCheckCircle className="text-gray-400 shrink-0 w-5 h-5" />
               </div>
             </div>
 
@@ -200,10 +196,7 @@ export default function Upload() {
               onChange={(e) => setSelectedCategoryId(e.target.value)}
             >
               <option value="">Selecione...</option>
-
-              {/* O ERRO PROVAVELMENTE ESTAVA AQUI: value={c.name} */}
               {categoriesList.map((c) => (
-                // CORREÇÃO: value={c.id} (O ID, não o nome!)
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -213,13 +206,13 @@ export default function Upload() {
 
           {/* Feedback */}
           {errors.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6 animate-shake">
               <Alert type="error" message={errors.join(" ")} />
             </div>
           )}
 
           {uploadSuccess && (
-            <div className="mb-6">
+            <div className="mb-6 animate-fadeIn">
               <Alert
                 type="success"
                 message={`Arquivo enviado com sucesso para ${currentSector?.name}!`}
@@ -228,7 +221,7 @@ export default function Upload() {
           )}
 
           {/* Dropzone */}
-          <section>
+          <section className="mb-6 md:mb-8">
             <FileDropzone
               selectedFiles={selectedFiles}
               onFilesSelected={handleFiles}
@@ -254,23 +247,23 @@ export default function Upload() {
             />
           </section>
 
-          {/* Botão */}
-          <div className="mt-8 flex justify-center">
+          {/* Botão de Envio */}
+          <div className="flex justify-center md:justify-end">
             <Button
               onClick={handleUpload}
-              className="w-auto px-10 bg-[#00bdd6] hover:bg-[#009eb8]"
+              className="w-full md:w-auto md:px-10 bg-[#00bdd6] hover:bg-[#009eb8]"
               disabled={
                 selectedFiles.length === 0 ||
                 !currentSector ||
                 !selectedCategoryId ||
-                isLoadingData // Desabilita se estiver enviando
+                isLoadingData
               }
             >
               {isLoadingData ? (
                 "Enviando..."
               ) : (
                 <>
-                  <FiUploadCloud size={20} className="mr-2" />
+                  <FiUploadCloud className="mr-2 w-5 h-5" />
                   Enviar Documento
                 </>
               )}
