@@ -110,3 +110,49 @@ export const downloadDocumentById = async (documentId, fallbackName) => {
     throw error;
   }
 };
+
+export const downloadZip = async (documentIds, customName = null) => {
+  try {
+    const idsParam = documentIds.join(',');
+
+    const response = await api.get(`/documents/download-zip`, {
+      params: { ids: idsParam },
+      responseType: 'blob',
+    });
+
+    let fileName = customName;
+
+    if (!fileName) {
+      fileName = "documentos_sidi_doc.zip";
+      const disposition = response.headers['content-disposition'];
+      if (disposition) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(disposition);
+        if (matches != null && matches[1]) {
+          fileName = matches[1].replace(/['"]/g, '');
+          try { fileName = decodeURIComponent(fileName); } catch(e){}
+        }
+      }
+    }
+
+    if (!fileName.toLowerCase().endsWith(".zip")) {
+      fileName += ".zip";
+    }
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+
+    link.setAttribute('download', fileName);
+
+    document.body.appendChild(link);
+    link.click();
+
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error("Erro ao baixar ZIP:", error);
+    throw error;
+  }
+};
