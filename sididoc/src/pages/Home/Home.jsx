@@ -187,7 +187,7 @@ export default function Dashboard() {
       const ids = documents.map(d => d.id);
       const sectorPart = selectedSector
           ? selectedSector.name
-              .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos (opcional, mas recomendado)
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
               .trim()
               .replace(/\s+/g, '_')
               .toLowerCase()
