@@ -208,9 +208,9 @@ export default function Dashboard() {
 
       let zipName = "";
       if (selectedCategory) {
-        zipName = `${clean(catName)}_setor_${clean(secName)}.zip`;
+        zipName = `${clean(catName)}_recentes_setor_${clean(secName)}.zip`;
       } else {
-        zipName = `documentos_setor_${clean(secName)}.zip`;
+        zipName = `documentos_recentes_setor_${clean(secName)}.zip`;
       }
 
       await downloadZip(ids, zipName);
