@@ -66,3 +66,47 @@ export const getCategoriesBySector = async () => {
     { id: 5, name: "Ofícios" }
   ];
 };
+
+export const downloadDocumentById = async (documentId, fallbackName) => {
+  try {
+    const response = await api.get(`/documents/download`, {
+      params: { id: documentId },
+      responseType: 'blob',
+    });
+
+    let fileName = fallbackName;
+
+    const disposition = response.headers['content-disposition'];
+
+    if (disposition && disposition.indexOf('attachment') !== -1) {
+      const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+      const matches = filenameRegex.exec(disposition);
+      if (matches != null && matches[1]) {
+        fileName = matches[1].replace(/['"]/g, '');
+      }
+    }
+
+    if (!fileName.includes(".")) {
+      const type = response.headers['content-type'];
+      if (type === 'application/pdf') fileName += ".pdf";
+      else if (type === 'image/jpeg') fileName += ".jpg";
+      else if (type === 'image/png') fileName += ".png";
+    }
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+
+    link.setAttribute('download', fileName);
+
+    document.body.appendChild(link);
+    link.click();
+
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error("Erro ao baixar documento:", error);
+    throw error;
+  }
+};

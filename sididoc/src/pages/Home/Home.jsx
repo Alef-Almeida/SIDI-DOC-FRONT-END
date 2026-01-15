@@ -14,10 +14,10 @@ import {
 
 // Serviços
 import { getMe, getMySectors, switchSector } from "../../services/authService";
-import { 
-  getDocumentsBySector, 
-  filterDocuments, 
-  getCategoriesBySector 
+import {
+  getDocumentsBySector,
+  filterDocuments,
+  getCategoriesBySector, downloadDocumentById
 } from "../../services/documentService"; 
 import api from "../../services/api";
 
@@ -194,6 +194,18 @@ export default function Dashboard() {
   const handleLogout = () => {
     localStorage.clear();
     navigate("/");
+  };
+
+  const handleDownload = async (doc) => {
+    try {
+      const fileName = doc.fileName || doc.name || "documento_sem_nome";
+
+      await downloadDocumentById(doc.id, fileName);
+
+      // eslint-disable-next-line no-unused-vars
+    } catch (error) {
+      alert("Erro ao iniciar o download. Tente novamente.");
+    }
   };
 
   // Lógica de busca visual dentro do dropdown de categorias
@@ -415,9 +427,10 @@ export default function Dashboard() {
                         {formatBytes(doc.fileSize || doc.size)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button 
-                          className="p-2 text-cyan-500 hover:bg-cyan-50 rounded-full transition shadow-sm border border-transparent hover:border-cyan-100"
-                          title="Baixar Documento"
+                        <button
+                            onClick={() => handleDownload(doc)} // <--- CONECTE AQUI
+                            className="p-2 text-cyan-500 hover:bg-cyan-50 rounded-full transition shadow-sm border border-transparent hover:border-cyan-100 cursor-pointer"
+                            title="Baixar Documento"
                         >
                           <FiDownload size={16} />
                         </button>
