@@ -49,7 +49,7 @@ export const filterDocuments = async (sectorId, categoryId) => {
     }
   });
   // Seu endpoint retorna List<DTO> direto, então retornamos data direto
-  return response.data; 
+  return response.data;
 };
 
 export const getCategoriesBySector = async () => {
@@ -133,7 +133,7 @@ export const downloadZip = async (documentIds, customName = null) => {
         const matches = filenameRegex.exec(disposition);
         if (matches != null && matches[1]) {
           fileName = matches[1].replace(/['"]/g, '');
-          try { fileName = decodeURIComponent(fileName); } catch(e){}
+          try { fileName = decodeURIComponent(fileName); } catch (e) { }
         }
       }
     }
@@ -156,6 +156,33 @@ export const downloadZip = async (documentIds, customName = null) => {
 
   } catch (error) {
     console.error("Erro ao baixar ZIP:", error);
+    throw error;
+  }
+};
+
+export const searchDocuments = async (query) => {
+  try {
+    const response = await api.post('/documents/search', { query });
+    return response.data;
+  } catch (error) {
+    console.error("Erro na busca semântica:", error);
+    throw error;
+  }
+};
+
+export const searchDocumentsByImage = async (imageFile) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', imageFile);
+
+    const response = await api.post('/documents/search-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Erro na busca por imagem:", error);
     throw error;
   }
 };
