@@ -36,6 +36,27 @@ export default function Upload() {
 
   const MAX_FILE_SIZE_MB = 50;
 
+  // === FUNÇÃO AUXILIAR PARA LER O TOKEN ===
+  function getSectorIdFromToken() {
+    try {
+      const token = localStorage.getItem("sidi_token");
+      if (!token) return null;
+      // Decodifica o payload do JWT (parte do meio)
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      const payload = JSON.parse(jsonPayload);
+      // Tenta achar o ID do setor. Ajuste a chave conforme seu backend gera (ex: sectorId, sector_id, ou dentro de claims)
+      return payload.sectorId || payload.sector_id || payload.sector; 
+    } catch (error) {
+      console.warn("Não foi possível ler o setor do token", error);
+      return null;
+    }
+  }
+
   // Carregamento Inicial
   useEffect(() => {
     async function loadInitialData() {
@@ -45,12 +66,23 @@ export default function Upload() {
         const cats = await getAllCategories();
         setCategoriesList(cats || []);
 
-        // Define Setor (Apenas visualmente agora)
+        // Define Setor
         if (location.state && location.state.sector) {
           setCurrentSector(location.state.sector);
         } else {
           const mySectors = await getMySectors();
-          if (mySectors && mySectors.length > 0) setCurrentSector(mySectors[0]);
+          
+          if (mySectors && mySectors.length > 0) {
+            // TENTA DESCOBRIR O SETOR ATIVO PELO TOKEN
+            const activeId = getSectorIdFromToken();
+            
+            // Se achou ID no token, procura na lista. Senão, usa o primeiro (fallback).
+            const activeSector = activeId 
+              ? mySectors.find(s => s.id === Number(activeId)) 
+              : mySectors[0];
+
+            setCurrentSector(activeSector || mySectors[0]);
+          }
         }
       } catch (error) {
         setErrors(["Não foi possível carregar as informações necessárias."]);

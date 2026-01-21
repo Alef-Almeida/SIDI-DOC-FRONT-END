@@ -11,7 +11,7 @@ import {
   FiDownload,
   FiX,
   FiPackage,
-  FiExternalLink // FiEye removido pois não é mais usado na tabela
+  FiExternalLink
 } from "react-icons/fi";
 
 import { getMe, getMySectors, switchSector } from "../../services/authService";
@@ -49,6 +49,26 @@ export default function Dashboard() {
 
   const sectorDropdownRef = useRef(null);
   const categoryDropdownRef = useRef(null);
+
+  // === FUNÇÃO AUXILIAR PARA LER O TOKEN (Igual à da página Upload) ===
+  function getSectorIdFromToken() {
+    try {
+      const token = localStorage.getItem("sidi_token");
+      if (!token) return null;
+      
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      const payload = JSON.parse(jsonPayload);
+      // Verifica as chaves comuns onde o ID pode estar
+      return payload.sectorId || payload.sector_id || payload.sector; 
+    } catch (error) {
+      return null;
+    }
+  }
 
   // === FORMATADORES ===
   const formatBytes = (bytes, decimals = 2) => {
@@ -99,7 +119,6 @@ export default function Dashboard() {
     try {
       const cats = await getCategoriesBySector();
       setCategories(cats || []);
-      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       console.warn("Não foi possível carregar categorias.");
     }
@@ -116,7 +135,19 @@ export default function Dashboard() {
         const mySectors = await getMySectors();
         setSectors(mySectors);
 
-        if (mySectors.length > 0) setSelectedSector(mySectors[0]);
+        // === CORREÇÃO AQUI ===
+        if (mySectors.length > 0) {
+           // Tenta pegar o ID do token
+           const activeId = getSectorIdFromToken();
+           
+           // Procura o setor na lista que bate com o ID do token
+           const activeSector = activeId 
+             ? mySectors.find(s => s.id === Number(activeId)) 
+             : mySectors[0];
+
+           // Define o setor correto visualmente
+           setSelectedSector(activeSector || mySectors[0]);
+        }
 
         await fetchCategories();
         await fetchDocuments(null);
@@ -149,7 +180,6 @@ export default function Dashboard() {
         await fetchCategories();
         await fetchDocuments(null);
       }
-      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       alert("Erro ao trocar setor.");
     }
@@ -177,7 +207,6 @@ export default function Dashboard() {
     try {
       const fileName = doc.title || "documento";
       await downloadDocumentById(doc.id, fileName);
-      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       alert("Erro ao iniciar o download.");
     }
@@ -310,7 +339,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* === TABELA ATUALIZADA === */}
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -332,7 +360,6 @@ export default function Dashboard() {
                         <tr key={doc.id} className="hover:bg-gray-50 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              {/* === ÍCONE AGORA É UM BOTÃO CLICKÁVEL PARA VISUALIZAR === */}
                               <button
                                   onClick={() => handleViewDocument(doc)}
                                   className="bg-gray-100 p-2 rounded text-gray-500 hover:bg-cyan-100 hover:text-cyan-600 transition cursor-pointer"
@@ -350,8 +377,6 @@ export default function Dashboard() {
                           <td className="px-6 py-4 hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">{doc.categoryName || "Geral"}</span></td>
                           <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">{formatDate(doc.uploadDate)}</td>
                           <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">{formatBytes(doc.sizeBytes)}</td>
-
-                          {/* === AÇÃO APENAS DOWNLOAD (OLHO REMOVIDO) === */}
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button onClick={() => handleDownload(doc)} className="p-2 text-cyan-500 hover:bg-cyan-50 rounded-full transition cursor-pointer" title="Baixar">
@@ -369,7 +394,6 @@ export default function Dashboard() {
           </div>
         </main>
 
-        {/* === MODAL DE VISUALIZAÇÃO === */}
         {viewingDoc && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
               <div className="bg-white w-full h-[90vh] max-w-5xl rounded-xl flex flex-col shadow-2xl overflow-hidden animate-scaleIn">
