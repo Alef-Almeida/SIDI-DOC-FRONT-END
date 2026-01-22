@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="04a36265-d51a-46dd-a510-fe0e1fa7203b" name="Changes" comment="feat: integra find all documents a tela de consulta">
+      <change afterPath="$PROJECT_DIR$/sididoc/src/services/BatchService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sididoc/src/pages/Upload/Upload.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/sididoc/src/pages/Upload/Upload.jsx" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="JavaScript File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="36f4JD17Z5CPtd9OONjaUy8vnwH" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;dev&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Micro/cursos/Angular/first-angular-app&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Program Files\\JetBrains\\WebStorm 2024.3.2.1\\plugins\\javascript-plugin\\jsLanguageServicesImpl\\external&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-WS-243.25659.40" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="04a36265-d51a-46dd-a510-fe0e1fa7203b" name="Changes" comment="" />
+      <created>1765384220548</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1765384220548</updated>
+      <workItem from="1765384224812" duration="2767000" />
+      <workItem from="1765388273610" duration="2851000" />
+      <workItem from="1765807884377" duration="3115000" />
+      <workItem from="1765829068270" duration="2150000" />
+      <workItem from="1765838030018" duration="984000" />
+      <workItem from="1765883886995" duration="1060000" />
+      <workItem from="1765885306000" duration="862000" />
+      <workItem from="1768444595545" duration="1843000" />
+      <workItem from="1768477950472" duration="1834000" />
+      <workItem from="1768482016118" duration="8487000" />
+      <workItem from="1768490803709" duration="6000" />
+      <workItem from="1768490881204" duration="99000" />
+      <workItem from="1768490982338" duration="1154000" />
+      <workItem from="1768507913266" duration="26000" />
+      <workItem from="1769087832292" duration="5345000" />
+    </task>
+    <task id="LOCAL-00001" summary="feat: download de documentos">
+      <option name="closed" value="true" />
+      <created>1768446537174</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1768446537174</updated>
+    </task>
+    <task id="LOCAL-00002" summary="fix: resolve bug de download salvando arquivos como .txt incorretamente">
+      <option name="closed" value="true" />
+      <created>1768479298527</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1768479298527</updated>
+    </task>
+    <task id="LOCAL-00003" summary="feat: integra a funcionalidade de baixar vários documentos como zip ao front end">
+      <option name="closed" value="true" />
+      <created>1768483482060</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1768483482060</updated>
+    </task>
+    <task id="LOCAL-00004" summary="fix: adiciona nome do setor no arquivo zip baixado">
+      <option name="closed" value="true" />
+      <created>1768484474880</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1768484474880</updated>
+    </task>
+    <task id="LOCAL-00005" summary="fix: adiciona nome do setor no arquivo zip baixado">
+      <option name="closed" value="true" />
+      <created>1768484611439</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1768484611439</updated>
+    </task>
+    <task id="LOCAL-00006" summary="feat: finaliza tela de consulta, integra aos endpoints de buscar e baixar documentos e altera nome do zip baixado">
+      <option name="closed" value="true" />
+      <created>1768486721423</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1768486721423</updated>
+    </task>
+    <task id="LOCAL-00007" summary="feat: adiciona modal para visualização de documentos">
+      <option name="closed" value="true" />
+      <created>1768489134648</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1768489134648</updated>
+    </task>
+    <task id="LOCAL-00008" summary="fix: altera nome do zip baixado para facilitar leitura">
+      <option name="closed" value="true" />
+      <created>1768491291160</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1768491291160</updated>
+    </task>
+    <task id="LOCAL-00009" summary="feat: integra find all documents a tela de consulta">
+      <option name="closed" value="true" />
+      <created>1768492286749</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1768492286749</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="feat: download de documentos" />
+    <MESSAGE value="fix: resolve bug de download salvando arquivos como .txt incorretamente" />
+    <MESSAGE value="feat: integra a funcionalidade de baixar vários documentos como zip ao front end" />
+    <MESSAGE value="fix: adiciona nome do setor no arquivo zip baixado" />
+    <MESSAGE value="feat: finaliza tela de consulta, integra aos endpoints de buscar e baixar documentos e altera nome do zip baixado" />
+    <MESSAGE value="feat: adiciona modal para visualização de documentos" />
+    <MESSAGE value="fix: altera nome do zip baixado para facilitar leitura" />
+    <MESSAGE value="feat: integra find all documents a tela de consulta" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: integra find all documents a tela de consulta" />
+  </component>
+</project>
