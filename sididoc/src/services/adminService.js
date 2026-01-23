@@ -32,6 +32,18 @@ export const addUserToSector = async (email, sectorCode) => {
   return response.data;
 };
 
+// Atualizar dados do usuário (Nome, Email, Role)
+export const updateUser = async (id, userData) => {
+  // userData deve ser { name, email, role }
+  const response = await api.put(`/users/update-profile/${id}`, userData);
+  return response.data;
+};
+
+// Placeholder para deletar usuário (já que você disse que está sendo feito)
+export const deleteUser = async (id) => {
+  await api.delete(`/users/${id}`); // Ajuste a URL quando o back estiver pronto
+};
+
 // ============================================================
 // GESTÃO DE SETORES (SectorController)
 // ============================================================
@@ -63,6 +75,18 @@ export const deleteSector = async (id) => {
   // Endpoint: DELETE /sectors/soft-delete?id=...
   const response = await api.delete(`/sectors/soft-delete?id=${id}`);
   return response.data;
+};
+
+// Remover usuário de um setor específico
+export const removeUserFromSector = async (sectorCode, userEmail) => {
+  // O endpoint é DELETE com Body (@RequestBody UserSectorDTO)
+  // No Axios, para mandar body em delete, usa-se a propriedade 'data'
+  await api.delete("/users/remove-from-sector", {
+    data: {
+      email: userEmail,
+      code: sectorCode
+    }
+  });
 };
 
 // ============================================================
