@@ -50,21 +50,20 @@ export default function Dashboard() {
   const sectorDropdownRef = useRef(null);
   const categoryDropdownRef = useRef(null);
 
-  // === FUNÇÃO AUXILIAR PARA LER O TOKEN (Igual à da página Upload) ===
+  // === FUNÇÃO AUXILIAR PARA LER O TOKEN ===
   function getSectorIdFromToken() {
     try {
       const token = localStorage.getItem("sidi_token");
       if (!token) return null;
-      
+
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
       }).join(''));
-      
+
       const payload = JSON.parse(jsonPayload);
-      // Verifica as chaves comuns onde o ID pode estar
-      return payload.sectorId || payload.sector_id || payload.sector; 
+      return payload.sectorId || payload.sector_id || payload.sector;
     } catch (error) {
       return null;
     }
@@ -135,18 +134,12 @@ export default function Dashboard() {
         const mySectors = await getMySectors();
         setSectors(mySectors);
 
-        // === CORREÇÃO AQUI ===
         if (mySectors.length > 0) {
-           // Tenta pegar o ID do token
-           const activeId = getSectorIdFromToken();
-           
-           // Procura o setor na lista que bate com o ID do token
-           const activeSector = activeId 
-             ? mySectors.find(s => s.id === Number(activeId)) 
-             : mySectors[0];
-
-           // Define o setor correto visualmente
-           setSelectedSector(activeSector || mySectors[0]);
+          const activeId = getSectorIdFromToken();
+          const activeSector = activeId
+              ? mySectors.find(s => s.id === Number(activeId))
+              : mySectors[0];
+          setSelectedSector(activeSector || mySectors[0]);
         }
 
         await fetchCategories();
@@ -357,29 +350,47 @@ export default function Dashboard() {
                     <tr><td colSpan="5" className="px-6 py-12 text-center flex flex-col items-center justify-center text-gray-400"><FiFileText size={32} className="mb-2 opacity-30" /><p>Nenhum documento encontrado.</p>{selectedCategory && <p className="text-xs mt-1 text-red-400">Tente limpar o filtro.</p>}</td></tr>
                 ) : (
                     documents.map((doc) => (
-                        <tr key={doc.id} className="hover:bg-gray-50 transition-colors group">
+                        <tr key={doc.id} className="transition-all duration-200">
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <button
-                                  onClick={() => handleViewDocument(doc)}
-                                  className="bg-gray-100 p-2 rounded text-gray-500 hover:bg-cyan-100 hover:text-cyan-600 transition cursor-pointer"
-                                  title="Clique para visualizar o documento"
-                              >
+                            {/* AQUI: onClick e hover SÓ no conjunto Ícone + Nome. Sem restrição de largura. */}
+                            <div
+                                onClick={() => handleViewDocument(doc)}
+                                className="flex items-center gap-3 cursor-pointer group"
+                                title="Visualizar documento"
+                            >
+                              <div className="bg-gray-100 p-2 rounded text-gray-500 group-hover:bg-cyan-100 group-hover:text-cyan-600 transition-colors shrink-0">
                                 <FiFileText size={16} />
-                              </button>
+                              </div>
 
                               <div className="flex flex-col">
-                                <span className="font-medium text-gray-700 text-sm" title={doc.title}>{doc.title || "Sem Título"}</span>
-                                <span className="text-[10px] text-gray-400 sm:hidden">{formatDate(doc.uploadDate)}</span>
+                                <span className="font-medium text-gray-700 text-sm group-hover:text-cyan-800 transition-colors">
+                                    {doc.title || "Sem Título"}
+                                </span>
+                                <span className="text-[10px] text-gray-400 sm:hidden mt-0.5">{formatDate(doc.uploadDate)}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">{doc.categoryName || "Geral"}</span></td>
-                          <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">{formatDate(doc.uploadDate)}</td>
-                          <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">{formatBytes(doc.sizeBytes)}</td>
+
+                          {/* Demais células sem click/hover interativo */}
+                          <td className="px-6 py-4 hidden sm:table-cell">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                                {doc.categoryName || "Geral"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">
+                            {formatDate(doc.uploadDate)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 hidden sm:table-cell">
+                            {formatBytes(doc.sizeBytes)}
+                          </td>
+
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => handleDownload(doc)} className="p-2 text-cyan-500 hover:bg-cyan-50 rounded-full transition cursor-pointer" title="Baixar">
+                              <button
+                                  onClick={() => handleDownload(doc)}
+                                  className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-colors"
+                                  title="Baixar"
+                              >
                                 <FiDownload size={16} />
                               </button>
                             </div>
