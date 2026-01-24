@@ -16,15 +16,33 @@ export async function getAllDocuments(page = 0, size = 10) {
   }
 }
 
-// Upload de Documentos
 export async function uploadDocument(formData) {
   const response = await api.post('/documents/upload', formData, {
     headers: {
+      // O navegador define automaticamente o boundary para multipart
       'Content-Type': 'multipart/form-data',
     },
   });
   return response.data;
 }
+
+export async function analyzeDocumentCategory(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await api.post('/documents/analyze', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Erro na análise de categoria:", error);
+    return {found: false};
+  }
+}
+
 
 // Busca Paginada por Setor (Sem filtro de categoria)
 export const getDocumentsBySector = async (page = 0, size = 10) => {
