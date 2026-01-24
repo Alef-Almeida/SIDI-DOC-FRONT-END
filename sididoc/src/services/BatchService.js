@@ -23,3 +23,16 @@ export async function createBatch(code, description) {
     });
     return response.data;
 }
+
+export const getAllBatches = async () => {
+    try {
+        const response = await api.get("/batches/find-all");
+        if (response.data && response.data.content) {
+            return response.data.content;
+        }
+        return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+        console.error("Erro ao buscar lotes:", error);
+        return [];
+    }
+};
