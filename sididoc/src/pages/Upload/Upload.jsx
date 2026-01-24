@@ -122,7 +122,7 @@ export default function Upload() {
     const newFiles = Array.from(fileList).map(file => ({
       file,
       id: Math.random().toString(36).substr(2, 9),
-      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      previewUrl: URL.createObjectURL(file),
       categoryId: globalCategoryId || "",
       isAnalyzing: false
     }));
@@ -261,37 +261,53 @@ export default function Upload() {
       isCheckingBatch
   );
 
+  // === MODAL LOCAL DE PREVIEW ===
   const LocalPreviewModal = ({ doc, onClose }) => {
     const isImage = doc.file.type.startsWith("image/");
-    const isPdf = doc.file.type === "application/pdf";
+
+    // Se por acaso não tiver URL (segurança), não crasha a tela
+    if (!doc.previewUrl) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fadeIn p-4" onClick={onClose}>
-          <div className="relative w-full max-w-6xl h-[90vh] flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fadeIn p-4"
+            onClick={onClose}
+        >
+          <div
+              className="relative w-full max-w-6xl h-[90vh] flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 shrink-0">
               <div className="flex flex-col">
                 <h3 className="text-gray-800 font-bold text-lg truncate max-w-md">{doc.file.name}</h3>
-                <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">{isImage ? "Imagem" : "PDF"}</span>
+                <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                            {isImage ? "Visualização de Imagem" : "Visualização de PDF"}
+                        </span>
               </div>
-              <button onClick={onClose} className="bg-gray-200 hover:bg-red-100 text-gray-600 hover:text-red-600 p-2 rounded-full transition-colors"><FiX size={20} /></button>
+              <button
+                  onClick={onClose}
+                  className="bg-gray-200 hover:bg-red-100 text-gray-600 hover:text-red-600 p-2 rounded-full transition-colors"
+              >
+                <FiX size={20} />
+              </button>
             </div>
-            <div className="flex-1 bg-gray-100 relative w-full h-full overflow-hidden">
+
+            {/* Corpo do Preview */}
+            <div className="flex-1 bg-gray-100 relative w-full h-full overflow-hidden flex items-center justify-center">
               {isImage ? (
-                  <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
-                    <img src={doc.previewUrl} alt="Preview" className="max-w-full max-h-full object-contain shadow-sm" />
-                  </div>
-              ) : isPdf ? (
-                  <object data={doc.previewUrl} type="application/pdf" className="w-full h-full block">
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                      <FiFileText size={48} className="mb-2 text-gray-300" />
-                      <p>Visualização indisponível.</p>
-                    </div>
-                  </object>
+                  <img
+                      src={doc.previewUrl}
+                      alt="Preview"
+                      className="max-w-full max-h-full object-contain p-2"
+                  />
               ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                    <FiFileText size={48} className="mb-4 text-gray-400" />
-                    <p>Arquivo não suportado para visualização.</p>
-                  </div>
+                  // EMBED COM CLASSE W-FULL H-FULL É O SEGREDO
+                  <embed
+                      src={doc.previewUrl}
+                      type="application/pdf"
+                      className="w-full h-full block"
+                  />
               )}
             </div>
           </div>
