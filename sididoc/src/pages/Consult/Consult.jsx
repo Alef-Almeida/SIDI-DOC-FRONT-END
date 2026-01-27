@@ -13,7 +13,9 @@ import {
     FiExternalLink,
     FiCamera,
     FiImage,
-    FiAperture // Usado para "Tirar Foto"
+    FiAperture, // Usado para "Tirar Foto"
+    FiChevronDown,
+    FiCheck
 } from 'react-icons/fi';
 
 import { getMySectors } from '../../services/authService';
@@ -26,16 +28,114 @@ import {
     searchDocuments,
     searchDocumentsByImage
 } from '../../services/documentService';
+import { getAllBatches } from '../../services/BatchService';
+
+// Componente Interno para Dropdown com Pesquisa
+const SearchableSelect = ({ options, value, onChange, placeholder, icon: Icon, className = "" }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const wrapperRef = useRef(null);
+
+    // Fecha ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Filtra opções
+    const filteredOptions = options.filter(opt => 
+        String(opt.label).toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const selectedOption = options.find(opt => String(opt.value) === String(value));
+
+    return (
+        <div className={`relative ${className}`} ref={wrapperRef}>
+            {/* Trigger Button */}
+            <div 
+                onClick={() => { setIsOpen(!isOpen); setSearchTerm(""); }}
+                className={`w-full flex items-center justify-between pl-3 pr-3 py-2 border rounded-lg text-sm cursor-pointer transition-all bg-white ${isOpen || value ? 'border-cyan-500 ring-1 ring-cyan-500' : 'border-gray-200 hover:border-gray-300'}`}
+            >
+                <div className="flex items-center gap-2 overflow-hidden">
+                    {Icon && <Icon className={`shrink-0 ${value ? 'text-cyan-600' : 'text-gray-400'}`} size={16} />}
+                    <span className={`truncate ${value ? 'text-cyan-900 font-medium' : 'text-gray-500'}`}>
+                        {selectedOption ? selectedOption.label : placeholder}
+                    </span>
+                </div>
+                <FiChevronDown className={`shrink-0 transition-transform ${isOpen ? 'rotate-180 text-cyan-500' : 'text-gray-400'}`} size={16} />
+            </div>
+
+            {/* Dropdown Menu */}
+            {isOpen && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden animate-fadeIn flex flex-col max-h-60">
+                    {/* Search Input */}
+                    <div className="p-2 border-b border-gray-100 bg-gray-50 sticky top-0">
+                        <div className="relative">
+                            <FiSearch className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
+                            <input 
+                                type="text"
+                                autoFocus
+                                className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-200 rounded bg-white focus:outline-none focus:border-cyan-500"
+                                placeholder="Filtrar..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Options List */}
+                    <div className="overflow-y-auto flex-1">
+                        <div 
+                            className={`px-3 py-2 text-sm cursor-pointer hover:bg-cyan-50 text-gray-500 flex items-center justify-between ${value === "" ? 'bg-cyan-50/50 font-medium' : ''}`}
+                            onClick={() => { onChange(""); setIsOpen(false); }}
+                        >
+                            <span>{placeholder} (Todos)</span>
+                            {value === "" && <FiCheck className="text-cyan-600" size={14}/>}
+                        </div>
+                        
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map(opt => (
+                                <div 
+                                    key={opt.value} 
+                                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-cyan-50 text-gray-700 flex items-center justify-between border-t border-gray-50 ${String(value) === String(opt.value) ? 'bg-cyan-50 font-medium text-cyan-900' : ''}`}
+                                    onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                                >
+                                    <span className="truncate">{opt.label}</span>
+                                    {String(value) === String(opt.value) && <FiCheck className="text-cyan-600" size={14}/>}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-3 py-4 text-center text-xs text-gray-400">
+                                Nenhum resultado
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function Consult() {
     // === ESTADOS ===
     const [documents, setDocuments] = useState([]);
     const [sectors, setSectors] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [batches, setBatches] = useState([]);
 
     // Filtros
     const [selectedSector, setSelectedSector] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
+    const [selectedBatch, setSelectedBatch] = useState("");
+    const [selectedType, setSelectedType] = useState("");
+    const [selectedYear, setSelectedYear] = useState("");
+    const [sortOrder, setSortOrder] = useState("desc"); // 'asc' ou 'desc' 
     const [searchQuery, setSearchQuery] = useState("");
 
     // Loading
@@ -58,6 +158,10 @@ export default function Consult() {
                 if (mySectors.length > 0) {
                     setSelectedSector(mySectors[0].id);
                 }
+
+                // Carrega Lotes
+                const allBatches = await getAllBatches();
+                setBatches(allBatches || []);
             } catch (error) {
                 console.error("Erro ao carregar filtros", error);
             }
@@ -302,7 +406,7 @@ export default function Consult() {
 
         setIsZipLoading(true);
         try {
-            const ids = documents.map(d => d.id);
+            const ids = filteredDocuments.map(d => d.id);
             const clean = (str) => (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, '_').toLowerCase();
 
             const secObj = sectors.find(s => s.id == selectedSector);
@@ -458,6 +562,90 @@ export default function Consult() {
         return mb.toFixed(1) + " MB";
     };
 
+    // === FILTRAGEM CLIENT-SIDE ===
+    const getFilteredDocuments = () => {
+        let docs = [...documents];
+
+        // 0. Filtro por Setor (Client-side fail-safe)
+        // Se a busca principal trouxe mistura (api.getDocumentsBySector sem parâmetros), garantimos aqui.
+        if (selectedSector) {
+            const secObj = sectors.find(s => String(s.id) === String(selectedSector));
+            if (secObj) {
+                const secName = secObj.name.toLowerCase();
+                docs = docs.filter(d => {
+                    // Tenta comparar por ID se existir, ou por Nome
+                    if (d.sectorId) return String(d.sectorId) === String(selectedSector);
+                    if (d.sectorName) return d.sectorName.toLowerCase() === secName;
+                    return true;
+                });
+            }
+        }
+
+        // 1. Filtro por Lote
+        if (selectedBatch) {
+            docs = docs.filter(d => 
+                d.batchCod === selectedBatch || 
+                d.batchCode === selectedBatch || 
+                d.batchId === selectedBatch || 
+                (d.batch && d.batch.code === selectedBatch)
+            );
+        }
+
+        // 2. Filtro por Tipo (Extensions/MIME)
+        if (selectedType) {
+            docs = docs.filter(d => {
+                // Verificação abrangente de campos que podem conter o tipo
+                const typeStr = (d.type || d.contentType || d.categoryName || "").toLowerCase();
+                
+                 if (selectedType === 'pdf') {
+                     return typeStr.includes('pdf');
+                 }
+                 if (selectedType === 'image') {
+                     return typeStr.includes('image') || typeStr.includes('jpg') || typeStr.includes('png') || typeStr.includes('jpeg');
+                 }
+                 return true;
+            });
+        }
+
+        // 3. Filtro por Ano
+        if (selectedYear) {
+            docs = docs.filter(d => {
+                if (!d.uploadDate) return false;
+                // backend retorna array [ano, mes, dia...] ou string
+                let year;
+                if (Array.isArray(d.uploadDate)) year = d.uploadDate[0];
+                else year = new Date(d.uploadDate).getFullYear();
+                return String(year) === String(selectedYear);
+            });
+        }
+
+        // 4. Ordenação por Ano
+        docs.sort((a, b) => {
+            let dateA, dateB;
+            
+            if (Array.isArray(a.uploadDate)) dateA = new Date(a.uploadDate[0], a.uploadDate[1]-1, a.uploadDate[2], a.uploadDate[3]||0, a.uploadDate[4]||0).getTime();
+            else dateA = new Date(a.uploadDate).getTime();
+
+            if (Array.isArray(b.uploadDate)) dateB = new Date(b.uploadDate[0], b.uploadDate[1]-1, b.uploadDate[2], b.uploadDate[3]||0, b.uploadDate[4]||0).getTime();
+            else dateB = new Date(b.uploadDate).getTime();
+
+            if (sortOrder === 'asc') return dateA - dateB;
+            return dateB - dateA;
+        });
+
+        return docs;
+    };
+
+    const filteredDocuments = getFilteredDocuments();
+
+    // Extrair anos disponíveis para o filtro
+    const availableYears = Array.from(new Set(documents.map(d => {
+        if (!d.uploadDate) return null;
+        if (Array.isArray(d.uploadDate)) return d.uploadDate[0];
+        return new Date(d.uploadDate).getFullYear();
+    }))).filter(Boolean).sort((a, b) => b - a);
+
+
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-10">
             {/* Header */}
@@ -469,7 +657,7 @@ export default function Consult() {
                         </Link>
                         <div>
                             <h1 className="text-xl font-bold text-gray-800">Consultar Documentos</h1>
-                            <p className="text-xs text-gray-500">Busque e acesse seus arquivos digitalizados</p>
+                            <p className="text-xs text-gray-500">Busque e filtre seus arquivos digitalizados</p>
                         </div>
                     </div>
                 </div>
@@ -477,81 +665,138 @@ export default function Consult() {
 
             <main className="max-w-7xl mx-auto px-4 py-8">
                 {/* Filtros */}
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Faça uma pergunta ou busque por conteúdo..."
-                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg text-sm bg-gray-50/50 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSemanticSearch()}
-                            />
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-6 space-y-4">
+                    
+                    {/* Linha 1: Busca Textual e Botões de Câmera */}
+                    <div className="relative w-full">
+                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Faça uma pergunta ou busque por conteúdo..."
+                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg text-sm bg-gray-50/50 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSemanticSearch()}
+                        />
 
-                            {/* Input Oculto para Imagem */}
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                accept="image/*"
-                                onChange={handleImageSearch}
-                            />
+                        {/* Input Oculto para Imagem */}
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleImageSearch}
+                        />
 
-                            {/* Botão de Câmera + Menu */}
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 camera-menu-container">
-                                <button
-                                    onClick={handleCameraClick}
-                                    className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition"
-                                    title="Buscar por imagem"
-                                >
-                                    <FiCamera size={20} />
-                                </button>
+                        {/* Botão de Câmera + Menu */}
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 camera-menu-container">
+                            <button
+                                onClick={handleCameraClick}
+                                className="p-2 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition"
+                                title="Buscar por imagem"
+                            >
+                                <FiCamera size={20} />
+                            </button>
 
-                                {showCameraMenu && (
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-30 overflow-hidden animate-fadeIn">
-                                        <div className="py-1">
-                                            <button
-                                                onClick={handleOptionTakePhoto}
-                                                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition"
-                                            >
-                                                <FiAperture className="text-cyan-500" /> Tirar Foto
-                                            </button>
-                                            <button
-                                                onClick={handleOptionAttach}
-                                                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition border-t border-gray-50"
-                                            >
-                                                <FiImage className="text-cyan-500" /> Anexar Imagem
-                                            </button>
-                                        </div>
+                            {showCameraMenu && (
+                                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-30 overflow-hidden animate-fadeIn">
+                                    <div className="py-1">
+                                        <button
+                                            onClick={handleOptionTakePhoto}
+                                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition"
+                                        >
+                                            <FiAperture className="text-cyan-500" /> Tirar Foto
+                                        </button>
+                                        <button
+                                            onClick={handleOptionAttach}
+                                            className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition border-t border-gray-50"
+                                        >
+                                            <FiImage className="text-cyan-500" /> Anexar Imagem
+                                        </button>
                                     </div>
-                                )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Linha 2: Filtros Estruturados */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        {/* 1. LOTE */}
+                        <SearchableSelect
+                            placeholder="Lote"
+                            icon={FiPackage}
+                            value={selectedBatch}
+                            onChange={setSelectedBatch}
+                            options={batches.map(b => ({ value: b.code, label: b.description ? `${b.code} - ${b.description}` : b.code }))}
+                        />
+
+                        {/* 2. SETOR */}
+                        <SearchableSelect
+                            placeholder="Setor"
+                            icon={FiFilter}
+                            value={selectedSector}
+                            onChange={setSelectedSector}
+                            options={sectors.map(s => ({ value: s.id, label: s.name }))}
+                        />
+
+                        {/* 3. TIPO (Select Simples) */}
+                        <div className="relative">
+                            <select 
+                                value={selectedType} 
+                                onChange={(e) => setSelectedType(e.target.value)} 
+                                className={`w-full appearance-none pl-3 pr-8 py-2 border rounded-lg text-sm outline-none cursor-pointer transition-all h-[38px] ${selectedType ? 'border-cyan-500 bg-cyan-50/30 text-cyan-900' : 'border-gray-200 bg-white text-gray-500'}`}
+                            >
+                                <option value="">Todos os Tipos</option>
+                                <option value="pdf">PDF</option>
+                                <option value="image">Imagens</option>
+                            </select>
+                           <FiFilter className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                        </div>
+
+                         {/* 4. CATEGORIA */}
+                         <SearchableSelect
+                            placeholder="Categoria"
+                            icon={FiFilter}
+                            value={selectedCategory}
+                            onChange={setSelectedCategory}
+                            options={categories.map(c => ({ value: c.id, label: c.name }))}
+                        />
+
+                        {/* 5. POR ANO */}
+                        <SearchableSelect
+                            placeholder="Ano"
+                            icon={FiFilter}
+                            value={selectedYear}
+                            onChange={setSelectedYear}
+                            options={availableYears.map(y => ({ value: y, label: String(y) }))}
+                        />
+
+                         {/* 6. ORGANIZAR POR ANO (Mantive Select Simples pois são só 2 opções) */}
+                         <div className="relative">
+                             <select 
+                                value={sortOrder} 
+                                onChange={(e) => setSortOrder(e.target.value)} 
+                                className="w-full appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-500 outline-none cursor-pointer hover:border-cyan-500 transition-all h-[38px]"
+                            >
+                                <option value="desc">Mais Recentes</option>
+                                <option value="asc">Mais Antigos</option>
+                            </select>
+                            {/* Ícone de ordenação */}
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                {sortOrder === 'asc' ? '↑' : '↓'}
                             </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3 md:w-auto w-full">
-                            <div className="relative min-w-[200px]">
-                                <select value={selectedSector} onChange={(e) => setSelectedSector(e.target.value)} className={`w-full appearance-none pl-4 pr-10 py-3 border rounded-lg text-sm outline-none cursor-pointer transition-all ${selectedSector ? 'border-cyan-500 ring-1 ring-cyan-500 bg-cyan-50/30 text-cyan-900 font-medium' : 'border-gray-200 bg-white text-gray-500'}`}>
-                                    <option value="" disabled>Selecione o Setor</option>
-                                    {sectors.map(sec => <option key={sec.id} value={sec.id}>{sec.name}</option>)}
-                                </select>
-                                <FiFilter className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${selectedSector ? 'text-cyan-600' : 'text-gray-400'}`} />
-                            </div>
-                            <div className="relative min-w-[200px]">
-                                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className={`w-full appearance-none pl-4 pr-10 py-3 border rounded-lg text-sm outline-none cursor-pointer transition-all ${selectedCategory ? 'border-cyan-500 ring-1 ring-cyan-500 bg-cyan-50/30 text-cyan-900 font-medium' : 'border-gray-200 bg-white text-gray-500'}`}>
-                                    <option value="">Todas as Categorias</option>
-                                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                                </select>
-                                <FiFilter className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${selectedCategory ? 'text-cyan-600' : 'text-gray-400'}`} />
-                            </div>
-                        </div>
+
                     </div>
                 </div>
 
                 {/* Barra de Status e Download All */}
                 <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <p className="text-sm font-semibold text-gray-600">{isLoading ? "Carregando..." : `${documents.length} documentos encontrados`}</p>
-                    {documents.length > 0 && (
+                    <p className="text-sm font-semibold text-gray-600">
+                        {isLoading ? "Carregando..." : `${filteredDocuments.length} documentos encontrados`} 
+                        {filteredDocuments.length !== documents.length && !isLoading && <span className="text-xs font-normal text-gray-400 ml-2">(Filtrado de {documents.length})</span>}
+                    </p>
+                    {filteredDocuments.length > 0 && (
                         <button onClick={handleDownloadAll} disabled={isZipLoading} className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition shadow-sm ${isZipLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' : 'bg-cyan-500 text-white hover:bg-cyan-600 active:scale-95'}`}>
                             {isZipLoading ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <FiPackage size={16} />}
                             {isZipLoading ? "Gerando ZIP..." : "Baixar Todos (.zip)"}
@@ -562,7 +807,7 @@ export default function Consult() {
                 {/* Lista de Documentos */}
                 {isLoading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">{[1, 2, 3, 4].map(i => <div key={i} className="h-56 bg-gray-200 rounded-xl"></div>)}</div>
-                ) : documents.length === 0 ? (
+                ) : filteredDocuments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                         <FiAlertCircle size={40} className="text-gray-300 mb-3" />
                         <p className="text-gray-500 font-medium">Nenhum documento encontrado.</p>
@@ -570,7 +815,7 @@ export default function Consult() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {documents.map((doc) => (
+                        {filteredDocuments.map((doc) => (
                             <div key={doc.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-start gap-4 mb-4">
