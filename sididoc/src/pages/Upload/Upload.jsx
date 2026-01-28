@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
   FiUploadCloud, FiLayers, FiCheckCircle, FiPackage,
-  FiLoader, FiInfo, FiFileText, FiTrash2, FiEye, FiCpu, FiAlertCircle, FiX, FiTag, FiZap
+  FiLoader, FiInfo, FiFileText, FiTrash2, FiEye, FiCpu, FiAlertCircle, FiX, FiTag, FiZap,
+  FiPrinter
 } from "react-icons/fi";
 
 // Serviços
@@ -10,6 +11,7 @@ import { getAllCategories } from "../../services/adminService";
 import { getMySectors } from "../../services/authService";
 import { findBatchByCode, createBatch } from "../../services/batchService";
 import { uploadDocument, analyzeDocumentCategory } from "../../services/documentService";
+import { ScannerModal } from "../../components/ScannerModal";
 
 // Componentes
 import { PageHeader } from "../../components/PageHeader";
@@ -25,6 +27,7 @@ export default function Upload() {
   const [categoriesList, setCategoriesList] = useState([]);
   const [globalCategoryId, setGlobalCategoryId] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // UI
   const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
@@ -149,6 +152,12 @@ export default function Upload() {
       setSelectedFiles(prev => prev.map(f => ({ ...f, categoryId: newCat })));
     }
   }
+
+  function handleScanComplete(file) {
+    // Aproveita sua função handleFiles existente!
+    // Ela espera uma lista (FileList ou Array), então passamos array
+    handleFiles([file]); 
+}
 
   // === IA ===
 
@@ -355,6 +364,21 @@ export default function Upload() {
         </section>
 
         <section className="mb-6">
+
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <FiUploadCloud className="text-gray-400"/> Área de Upload
+            </span>
+            <button 
+                onClick={() => setIsScannerOpen(true)}
+                className="flex items-center gap-2 text-xs font-bold text-[#00bdd6] bg-cyan-50 hover:bg-cyan-100 px-3 py-2 rounded-lg transition-colors border border-cyan-100 shadow-sm"
+                title="Escanear documento físico"
+            >
+                <FiPrinter size={16} />
+                Digitalizar Documento
+            </button>
+          </div>
+
           <FileDropzone selectedFiles={[]} onFilesSelected={handleFiles} isDragging={isDragging} setIsDragging={setIsDragging} maxSizeMB={MAX_FILE_SIZE_MB} />
 
           <div className="mt-4 flex items-center gap-2">
@@ -476,6 +500,11 @@ export default function Upload() {
         </div>
 
         {previewDoc && <LocalPreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
+          <ScannerModal 
+            isOpen={isScannerOpen} 
+            onClose={() => setIsScannerOpen(false)} 
+            onScanComplete={handleScanComplete}
+        />
       </div>
   );
 }
